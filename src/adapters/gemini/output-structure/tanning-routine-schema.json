@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "description": "Return exactly one state: data on success, or errmsg on failure.",
+  "properties": {
+    "errmsg": {
+      "type": "object",
+      "properties": {
+        "errorCode": { "type": "string", "enum": ["ERR-01", "ERR-99"] },
+        "suggestion": { "type": "string" }
+      },
+      "required": ["errorCode", "suggestion"],
+      "propertyOrdering": ["errorCode", "suggestion"]
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "routineName": { "type": "string" },
+        "totalDays": { "type": "integer" },
+        "targetGoal": { "type": "string" },
+        "dailySchedule": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": { "type": "integer" },
+              "phase": { "type": "string" },
+              "activities": { "type": "array", "items": { "type": "string" } }
+            },
+            "required": ["day", "phase", "activities"],
+            "propertyOrdering": ["day", "phase", "activities"]
+          }
+        }
+      },
+      "required": ["routineName", "totalDays", "targetGoal", "dailySchedule"],
+      "propertyOrdering": ["routineName", "totalDays", "targetGoal", "dailySchedule"]
+    }
+  },
+  "propertyOrdering": ["errmsg", "data"]
+}

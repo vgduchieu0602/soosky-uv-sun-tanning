@@ -1,0 +1,26 @@
+node_modules
+dist
+coverage
+logs
+mongo-data
+
+.git
+.gitignore
+.github
+
+# Bi mat: khong bao gio vao build context.
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.p8
+*.pem
+
+*.log
+*.md
+docs
+.superpowers
+docker-compose*.yml
+Dockerfile
+.dockerignore
