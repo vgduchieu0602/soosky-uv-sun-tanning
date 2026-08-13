@@ -74,11 +74,20 @@ export default class GeminiSkinScanAnalyzer implements SkinScanAnalyzer {
             const output = parseModelOutput(response);
 
             if (output === undefined) return SYSTEM_ERROR;
-            if ("errmsg" in output) return { errmsg: output.errmsg };
+            if ("errmsg" in output) {
+                if (output.errmsg.errorCode === "ERROR_SYSTEM") {
+                    console.error("Gemini skin scan returned a model system error.", {
+                        errorCode: output.errmsg.errorCode,
+                        suggestion: redactSecrets(output.errmsg.suggestion),
+                    });
+                }
+                return { errmsg: output.errmsg };
+            }
 
             const grounding = extractGrounding(response);
             return grounding === undefined ? { data: output.data } : { data: output.data, grounding };
-        } catch {
+        } catch (error) {
+            console.error("Gemini skin scan failed.", createErrorDiagnostic(error));
             return SYSTEM_ERROR;
         }
     }
@@ -167,4 +176,30 @@ function isRecord (value: unknown): value is Record<string, unknown> {
 
 function hasOnlyKeys (value: Record<string, unknown>, keys: string[]): boolean {
     return Object.keys(value).every((key) => keys.includes(key));
+}
+
+function createErrorDiagnostic (error: unknown): {
+    name: string;
+    message: string;
+    status?: number;
+    code?: string;
+} {
+    const details = isRecord(error) ? error : {};
+    const diagnostic = {
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? redactSecrets(error.message) : "A non-error value was thrown.",
+        status: typeof details.status === "number" ? details.status : undefined,
+        code: typeof details.code === "string" ? details.code : undefined,
+    };
+
+    return Object.fromEntries(Object.entries(diagnostic).filter(([, value]) => value !== undefined)) as {
+        name: string;
+        message: string;
+        status?: number;
+        code?: string;
+    };
+}
+
+function redactSecrets (value: string): string {
+    return value.replace(/([?&](?:key|api[_-]?key|appid)=)[^&#\s]+/gi, "$1[redacted]");
 }

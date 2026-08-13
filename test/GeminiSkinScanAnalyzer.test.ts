@@ -81,12 +81,30 @@ test("rejects a model result containing both data and errmsg", async () => {
     assert.deepEqual(await analyzer.scanSkin(IMAGE), SYSTEM_ERROR);
 });
 
-test("converts a generator exception to the system error", async () => {
+test("logs a sanitized upstream failure before returning the system error", async () => {
+    const diagnostics: unknown[][] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]): void => {
+        diagnostics.push(args);
+    };
     const analyzer = new GeminiSkinScanAnalyzer("key", "model", async () => {
-        throw new Error("upstream unavailable");
+        const error = new Error("Provider rejected https://example.test?key=secret-key");
+        Object.assign(error, { status: 429, code: "RESOURCE_EXHAUSTED" });
+        throw error;
     });
 
-    assert.deepEqual(await analyzer.scanSkin(IMAGE), SYSTEM_ERROR);
+    try {
+        assert.deepEqual(await analyzer.scanSkin(IMAGE), SYSTEM_ERROR);
+    } finally {
+        console.error = originalError;
+    }
+
+    assert.deepEqual(diagnostics, [["Gemini skin scan failed.", {
+        name: "Error",
+        message: "Provider rejected https://example.test?key=[redacted]",
+        status: 429,
+        code: "RESOURCE_EXHAUSTED",
+    }]]);
 });
 
 test("sends the configured model and one base64 inline image", async () => {

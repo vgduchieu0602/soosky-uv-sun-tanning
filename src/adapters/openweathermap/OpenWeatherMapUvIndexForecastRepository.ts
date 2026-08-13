@@ -83,6 +83,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
         const temp = timeline === "daily"
             ? getDailyTemperature(step.temp)
             : step.temp;
+        const pop = step.pop ?? 0;
 
         if (
             typeof description !== "string"
@@ -90,15 +91,15 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
             || !Number.isFinite(temp)
             || typeof step.uvi !== "number"
             || !Number.isFinite(step.uvi)
-            || typeof step.pop !== "number"
-            || !Number.isFinite(step.pop)
-            || step.pop < 0
-            || step.pop > 1
+            || typeof pop !== "number"
+            || !Number.isFinite(pop)
+            || pop < 0
+            || pop > 1
         ) {
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
         }
 
-        return { description, uvi: step.uvi, temp, pop: step.pop };
+        return { description, uvi: step.uvi, temp, pop };
     }
 }
 

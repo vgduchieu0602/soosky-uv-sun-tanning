@@ -97,6 +97,26 @@ describe("OpenWeatherMapUvIndexRepository", () => {
 });
 
 describe("OpenWeatherMapUvIndexForecastRepository", () => {
+    it("treats a missing daily pop as zero precipitation probability", async () => {
+        const repository = new OpenWeatherMapUvIndexForecastRepository(
+            "test-key",
+            async (): Promise<Response> => new Response(JSON.stringify({
+                data: [{
+                    temp: { day: 32.82 },
+                    uvi: 0,
+                    weather: [{ description: "broken clouds" }],
+                }],
+            }), { status: 200 }),
+        );
+
+        assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
+            description: "broken clouds",
+            uvi: 0,
+            temp: 32.82,
+            pop: 0,
+        }]);
+    });
+
     it("map daily temp.day va hourly moi 3 gio tu One Call 4.0", async () => {
         const requestedUrls: URL[] = [];
         const repository = new OpenWeatherMapUvIndexForecastRepository(

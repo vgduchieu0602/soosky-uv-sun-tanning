@@ -1,0 +1,192 @@
+{
+  "info": {
+    "_postman_id": "9f53cf06-057c-4b8a-8e4d-1275120863ed",
+    "name": "Soosky UV Sun Tanning API",
+    "description": "Import this collection into Postman. Set baseUrl, API keys are read by the local server from .env.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://uv-sun-tanning.vuonghieu.site"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('uses the success envelope', function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "UV",
+      "item": [
+        {
+          "name": "Current UV index",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/uv-index?lat=10.7769&lon=106.7009"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('returns current UV values', function () {",
+                "  pm.response.to.have.status(200);",
+                "  const data = pm.response.json().data;",
+                "  pm.expect(data).to.have.all.keys('description', 'uvi', 'temp');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Daily forecast",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/uv-index/daily?lat=10.7769&lon=106.7009"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('returns daily forecast items', function () {",
+                "  pm.response.to.have.status(200);",
+                "  const data = pm.response.json().data;",
+                "  pm.expect(data).to.be.an('array');",
+                "  pm.expect(data[0]).to.have.all.keys('description', 'uvi', 'temp', 'pop');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Hourly forecast (3-hour steps)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/uv-index/hourly?lat=10.7769&lon=106.7009"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('returns hourly forecast items', function () {",
+                "  pm.response.to.have.status(200);",
+                "  const data = pm.response.json().data;",
+                "  pm.expect(data).to.be.an('array');",
+                "  pm.expect(data[0]).to.have.all.keys('description', 'uvi', 'temp', 'pop');",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Skin scan",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [{
+            "key": "image",
+            "type": "file",
+            "src": [],
+            "description": "Choose one clear frontal face image in Postman before sending."
+          }]
+        },
+        "url": "{{baseUrl}}/api/v1/skin-scan",
+        "description": "Choose a local image for the image field before sending."
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns only data or errmsg', function () {",
+            "  pm.expect(pm.response.code).to.be.oneOf([200, 400, 422, 502]);",
+            "  const body = pm.response.json();",
+            "  pm.expect((body.data !== undefined) !== (body.errmsg !== undefined)).to.eql(true);",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Tanning routine",
+      "item": [
+        {
+          "name": "Create routine",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentSkin\": {\n    \"skinTone\": \"Very Fair Skin\",\n    \"skinAge\": \"25-30\",\n    \"hydration\": \"Hydrated\",\n    \"skinType\": \"Oily Skin\"\n  },\n  \"desiredSkin\": \"Medium Skin\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/tanning-routine"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('returns a valid routine or an exact error object', function () {",
+                "  pm.expect(pm.response.code).to.be.oneOf([200, 400, 502]);",
+                "  const body = pm.response.json();",
+                "  if (body.data) {",
+                "    pm.expect(body.data).to.have.all.keys('routineName', 'totalDays', 'targetGoal', 'dailySchedule');",
+                "    pm.expect(body.data.dailySchedule.length).to.eql(body.data.totalDays);",
+                "  } else { pm.expect(body).to.have.property('errmsg'); }",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Pass through scan error",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"errmsg\": {\n    \"errorCode\": \"ERROR_TOO_MANY_FACES\",\n    \"suggestion\": \"Please provide an image containing only one face for accurate skin analysis.\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/tanning-routine"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('passes scan error through unchanged', function () {",
+                "  pm.response.to.have.status(422);",
+                "  pm.expect(pm.response.json()).to.eql({ errmsg: { errorCode: 'ERROR_TOO_MANY_FACES', suggestion: 'Please provide an image containing only one face for accurate skin analysis.' } });",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    }
+  ]
+}
