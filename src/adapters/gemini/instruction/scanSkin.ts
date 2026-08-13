@@ -32,8 +32,8 @@ Assess based on the T-zone, pore size, oil shine, and irritation signs:
 - Sensitive Skin: visible redness, irritation, visible capillaries
 
 # 3. Mandatory Requirements
-- Only analyze facial skin appearance \u2014 do not provide medical diagnoses.
-- Return ONLY valid JSON following the schema provided \u2014 no extra text, no markdown wrappers outside the JSON structure.
+- Only analyze facial skin appearance — do not provide medical diagnoses.
+- Return ONLY valid JSON following the schema provided — no extra text, no markdown wrappers outside the JSON structure.
 
 # 4. Error Handling
 If the input image is invalid, improper, or an analysis failure occurs, immediately halt the process and return ONLY the \`errmsg\` object using one of the following error codes along with a clear \`suggestion\`:
