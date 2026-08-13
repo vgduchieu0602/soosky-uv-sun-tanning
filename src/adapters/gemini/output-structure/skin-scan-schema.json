@@ -1,44 +1,96 @@
 {
-    "type": "object",
-    "propertyOrdering": ["errmsg", "data"],
-    "properties": {
-        "errmsg": {
-            "type": "object",
-            "properties": {
-                "errorCode": {
-                    "type": "string",
-                    "enum": [
-                        "ERROR_NON_SKIN",
-                        "ERROR_TOO_MANY_FACES",
-                        "ERROR_NO_FACE_DETECTED",
-                        "ERROR_IMAGE_BLURRY",
-                        "ERROR_IMAGE_GLARE",
-                        "ERROR_LIGHTING_POOR",
-                        "ERROR_SYSTEM"
-                    ]
-                },
-                "suggestion": { "type": "string" }
-            },
-            "required": ["errorCode", "suggestion"]
+  "type": "object",
+  "description": "Strictly return ONLY ONE of two states: 1) If an error occurs or identification fails, return ONLY the 'errmsg' object, and omit successful fields. 2) If successful, return data fields and completely omit 'errmsg'.",
+  "properties": {
+    "errmsg": {
+      "type": "object",
+      "description": "Error information returned when facial skin analysis fails or invalid image/system error occurs. Omit this entirely if analysis is successful.",
+      "properties": {
+        "errorCode": {
+          "type": "string",
+          "description": "Specific error code classifying the scan failure or system error.",
+          "enum": [
+            "ERROR_NON_SKIN",
+            "ERROR_TOO_MANY_FACES",
+            "ERROR_NO_FACE_DETECTED",
+            "ERROR_IMAGE_BLURRY",
+            "ERROR_IMAGE_GLARE",
+            "ERROR_LIGHTING_POOR",
+            "ERROR_SYSTEM"
+          ]
         },
-        "data": {
-            "type": "object",
-            "properties": {
-                "skinTone": {
-                    "type": "string",
-                    "enum": ["Very Fair Skin", "Fair Skin", "Medium Skin", "Olive Skin", "Brown Skin", "Dark Skin"]
-                },
-                "skinAge": { "type": "string" },
-                "hydration": {
-                    "type": "string",
-                    "enum": ["Critically Dry", "Dehydrated", "Hydrated", "Over-Hydrated"]
-                },
-                "skinType": {
-                    "type": "string",
-                    "enum": ["Normal Skin", "Dry Skin", "Oily Skin", "Combination Skin", "Sensitive Skin"]
-                }
-            },
-            "required": ["skinTone", "skinAge", "hydration", "skinType"]
+        "suggestion": {
+          "type": "string",
+          "description": "Suggested action or explanation for resolving the error."
         }
+      },
+      "required": [
+        "errorCode",
+        "suggestion"
+      ],
+      "propertyOrdering": [
+        "errorCode",
+        "suggestion"
+      ]
+    },
+    "data": {
+      "type": "object",
+      "description": "Facial skin assessment details. Omit this entirely if an error occurs.",
+      "properties": {
+        "skinTone": {
+          "type": "string",
+          "description": "Classified skin color scale based on cheek and forehead area.",
+          "enum": [
+            "Very Fair Skin",
+            "Fair Skin",
+            "Medium Skin",
+            "Olive Skin",
+            "Brown Skin",
+            "Dark Skin"
+          ]
+        },
+        "skinAge": {
+          "type": "string",
+          "description": "Estimated skin age range as a string, e.g. '25-30'."
+        },
+        "hydration": {
+          "type": "string",
+          "description": "Hydration status based on surface texture, shine, or dryness.",
+          "enum": [
+            "Critically Dry",
+            "Dehydrated",
+            "Hydrated",
+            "Over-Hydrated"
+          ]
+        },
+        "skinType": {
+          "type": "string",
+          "description": "Skin type classification based on T-zone, pores, and oil shine.",
+          "enum": [
+            "Normal Skin",
+            "Dry Skin",
+            "Oily Skin",
+            "Combination Skin",
+            "Sensitive Skin"
+          ]
+        }
+      },
+      "required": [
+        "skinTone",
+        "skinAge",
+        "hydration",
+        "skinType"
+      ],
+      "propertyOrdering": [
+        "skinTone",
+        "skinAge",
+        "hydration",
+        "skinType"
+      ]
     }
+  },
+  "propertyOrdering": [
+    "errmsg",
+    "data"
+  ]
 }
