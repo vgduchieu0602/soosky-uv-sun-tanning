@@ -88,6 +88,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
         step: OpenWeatherMapForecastStep,
         timeline: "daily" | "hourly",
     ): UvIndexForecastPoint {
+        const datetime = getForecastDatetime(step.dt);
         const description = step.weather?.[0]?.description;
         const temp = timeline === "daily"
             ? getDailyTemperature(step.temp)
@@ -95,7 +96,8 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
         const pop = step.pop ?? 0;
 
         if (
-            typeof description !== "string"
+            datetime === undefined
+            || typeof description !== "string"
             || typeof temp !== "number"
             || !Number.isFinite(temp)
             || typeof step.uvi !== "number"
@@ -108,7 +110,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
         }
 
-        return { description, uvi: step.uvi, temp, pop };
+        return { datetime, description, uvi: step.uvi, temp, pop };
     }
 }
 
@@ -118,6 +120,13 @@ function getDailyTemperature (temperature: OpenWeatherMapForecastStep["temp"]): 
     }
 
     return undefined;
+}
+
+function getForecastDatetime (timestamp: OpenWeatherMapForecastStep["dt"]): Date | undefined {
+    if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) return undefined;
+
+    const datetime = new Date(timestamp * 1000);
+    return Number.isNaN(datetime.getTime()) ? undefined : datetime;
 }
 
 function isRequestedHourlySlot (timestamp: unknown, timezoneOffset: number): boolean {

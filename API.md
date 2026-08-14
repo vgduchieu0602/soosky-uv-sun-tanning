@@ -111,6 +111,7 @@ Response `200`:
   "ok": true,
   "data": [
     {
+      "datetime": "2026-08-14T00:00:00.000Z",
       "description": "light rain",
       "uvi": "6.2",
       "temp": "29.5",
@@ -128,6 +129,7 @@ Response item fields for daily and hourly:
 
 | Field | Meaning |
 | --- | --- |
+| `datetime` | Forecast instant in ISO 8601 UTC |
 | `description` | Weather description from OpenWeatherMap |
 | `uvi` | UV index |
 | `temp` | Temperature in Celsius |

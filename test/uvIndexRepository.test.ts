@@ -41,11 +41,11 @@ describe("CachedUvIndexForecastRepository", () => {
         const upstream: UvIndexForecastRepository = {
             getDailyUvForecast: async () => {
                 dailyCalls += 1;
-                return [{ description: "clear sky", uvi: dailyCalls, temp: 30, pop: 0 }];
+                return [{ datetime: new Date(0), description: "clear sky", uvi: dailyCalls, temp: 30, pop: 0 }];
             },
             getHourlyUvForecast: async () => {
                 hourlyCalls += 1;
-                return [{ description: "clear sky", uvi: hourlyCalls, temp: 30, pop: 0 }];
+                return [{ datetime: new Date(0), description: "clear sky", uvi: hourlyCalls, temp: 30, pop: 0 }];
             },
         };
         const repository = new CachedUvIndexForecastRepository(
@@ -116,11 +116,11 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         );
 
         assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), [
-            { description: "06:00", uvi: 1, temp: 30, pop: 0 },
-            { description: "09:00", uvi: 3, temp: 30, pop: 0 },
-            { description: "12:00", uvi: 5, temp: 30, pop: 0 },
-            { description: "15:00", uvi: 6, temp: 30, pop: 0 },
-            { description: "18:00", uvi: 7, temp: 30, pop: 0 },
+            { datetime: new Date(82_800_000), description: "06:00", uvi: 1, temp: 30, pop: 0 },
+            { datetime: new Date(93_600_000), description: "09:00", uvi: 3, temp: 30, pop: 0 },
+            { datetime: new Date(104_400_000), description: "12:00", uvi: 5, temp: 30, pop: 0 },
+            { datetime: new Date(115_200_000), description: "15:00", uvi: 6, temp: 30, pop: 0 },
+            { datetime: new Date(126_000_000), description: "18:00", uvi: 7, temp: 30, pop: 0 },
         ]);
     });
 
@@ -129,6 +129,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
             "test-key",
             async (): Promise<Response> => new Response(JSON.stringify({
                 data: [{
+                    dt: 0,
                     temp: { day: 32.82 },
                     uvi: 0,
                     weather: [{ description: "broken clouds" }],
@@ -137,6 +138,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         );
 
         assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
+            datetime: new Date(0),
             description: "broken clouds",
             uvi: 0,
             temp: 32.82,
@@ -155,7 +157,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 return new Response(JSON.stringify({
                     timezone_offset: 0,
                     data: isDaily
-                        ? [{ temp: { day: 29.5 }, uvi: 6.2, pop: 0.7, weather: [{ description: "light rain" }] }]
+                        ? [{ dt: 86_400, temp: { day: 29.5 }, uvi: 6.2, pop: 0.7, weather: [{ description: "light rain" }] }]
                         : [
                             { dt: 21_600, temp: 30, uvi: 1, pop: 0, weather: [{ description: "first" }] },
                             { dt: 25_200, temp: 30, uvi: 2, pop: 0, weather: [{ description: "skip one" }] },
@@ -168,10 +170,10 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         const daily = await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 });
         const hourly = await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 });
 
-        assert.deepEqual(daily, [{ description: "light rain", uvi: 6.2, temp: 29.5, pop: 0.7 }]);
+        assert.deepEqual(daily, [{ datetime: new Date(86_400_000), description: "light rain", uvi: 6.2, temp: 29.5, pop: 0.7 }]);
         assert.deepEqual(hourly, [
-            { description: "first", uvi: 1, temp: 30, pop: 0 },
-            { description: "three hours", uvi: 4, temp: 31, pop: 0.1 },
+            { datetime: new Date(21_600_000), description: "first", uvi: 1, temp: 30, pop: 0 },
+            { datetime: new Date(32_400_000), description: "three hours", uvi: 4, temp: 31, pop: 0.1 },
         ]);
         assert.deepEqual(requestedUrls.map((url) => url.pathname), [
             "/data/4.0/onecall/timeline/1day",
