@@ -1,4 +1,7 @@
-import { UvIndexForecastPoint } from "../../domain/entities/UvIndexForecastPoint.js";
+import {
+    UvIndexForecastPoint,
+    UvIndexForecastWeather,
+} from "../../domain/entities/UvIndexForecastPoint.js";
 import UpstreamUnavailableError from "../../domain/errors/UpstreamUnavailableError.js";
 import UvIndexForecastRepository from "../../domain/repositories/IUvIndexForecastRepository.js";
 import { UvIndexCoordinates } from "../../domain/repositories/IUvIndexRepository.js";
@@ -21,7 +24,12 @@ interface OpenWeatherMapForecastStep {
     temp?: number | { day?: number };
     uvi?: number;
     pop?: number;
-    weather?: Array<{ description?: string }>;
+    weather?: Array<{
+        id?: number;
+        main?: string;
+        description?: string;
+        icon?: string;
+    }>;
 }
 
 class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastRepository {
@@ -89,7 +97,8 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
         timeline: "daily" | "hourly",
     ): UvIndexForecastPoint {
         const datetime = getForecastDatetime(step.dt);
-        const description = step.weather?.[0]?.description;
+        const weather = mapForecastWeather(step.weather);
+        const description = weather?.[0]?.description;
         const temp = timeline === "daily"
             ? getDailyTemperature(step.temp)
             : step.temp;
@@ -97,6 +106,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
 
         if (
             datetime === undefined
+            || weather === undefined
             || typeof description !== "string"
             || typeof temp !== "number"
             || !Number.isFinite(temp)
@@ -110,7 +120,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
         }
 
-        return { datetime, description, uvi: step.uvi, temp, pop };
+        return { datetime, weather, description, uvi: step.uvi, temp, pop };
     }
 }
 
@@ -127,6 +137,33 @@ function getForecastDatetime (timestamp: OpenWeatherMapForecastStep["dt"]): Date
 
     const datetime = new Date(timestamp * 1000);
     return Number.isNaN(datetime.getTime()) ? undefined : datetime;
+}
+
+function mapForecastWeather (
+    weather: OpenWeatherMapForecastStep["weather"],
+): UvIndexForecastWeather[] | undefined {
+    if (!Array.isArray(weather) || weather.length === 0) return undefined;
+
+    const mapped = weather.map((item) => {
+        const period = item.icon?.at(-1);
+        if (
+            !Number.isSafeInteger(item.id)
+            || typeof item.main !== "string" || item.main === ""
+            || typeof item.description !== "string" || item.description === ""
+            || typeof item.icon !== "string" || item.icon === ""
+            || (period !== "d" && period !== "n")
+        ) return undefined;
+
+        return {
+            code: String(item.id) + period,
+            mainWeather: item.main,
+            description: item.description,
+            icon: item.icon,
+        };
+    });
+
+    if (mapped.some((item) => item === undefined)) return undefined;
+    return mapped as UvIndexForecastWeather[];
 }
 
 function isRequestedHourlySlot (timestamp: unknown, timezoneOffset: number): boolean {

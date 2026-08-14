@@ -112,6 +112,14 @@ Response `200`:
   "data": [
     {
       "datetime": "2026-08-14T00:00:00.000Z",
+      "weather": [
+        {
+          "code": "500d",
+          "mainWeather": "Rain",
+          "description": "light rain",
+          "icon": "10d"
+        }
+      ],
       "description": "light rain",
       "uvi": "6.2",
       "temp": "29.5",
@@ -130,10 +138,13 @@ Response item fields for daily and hourly:
 | Field | Meaning |
 | --- | --- |
 | `datetime` | Forecast instant in ISO 8601 UTC |
+| `weather` | OpenWeatherMap weather conditions; each item has `code`, `mainWeather`, `description`, and `icon` |
 | `description` | Weather description from OpenWeatherMap |
 | `uvi` | UV index |
 | `temp` | Temperature in Celsius |
 | `pop` | Probability of precipitation from `0` to `1` |
+
+`weather[].code` is a string composed from the provider weather ID and the day/night suffix in `icon`; for example, weather ID `500` with icon `10d` becomes `"500d"`.
 
 ## Facial skin scan
 

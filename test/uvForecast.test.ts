@@ -17,6 +17,7 @@ describe("UV forecast endpoints", () => {
                     getDailyUvForecast: {
                         execute: async () => [{
                             datetime: new Date("2026-08-14T00:00:00.000Z"),
+                            weather: [{ code: "500d", mainWeather: "Rain", description: "light rain", icon: "10d" }],
                             description: "light rain",
                             uvi: 6.2,
                             temp: 29.5,
@@ -26,6 +27,7 @@ describe("UV forecast endpoints", () => {
                     getHourlyUvForecast: {
                         execute: async () => [{
                             datetime: new Date("2026-08-14T06:00:00.000Z"),
+                            weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
                             description: "few clouds",
                             uvi: 4.1,
                             temp: 30,
@@ -56,6 +58,7 @@ describe("UV forecast endpoints", () => {
         assert.equal(body.ok, true);
         assert.deepEqual(body.data, [{
             datetime: "2026-08-14T00:00:00.000Z",
+            weather: [{ code: "500d", mainWeather: "Rain", description: "light rain", icon: "10d" }],
             description: "light rain",
             uvi: "6.2",
             temp: "29.5",
@@ -74,6 +77,7 @@ describe("UV forecast endpoints", () => {
         assert.equal(body.ok, true);
         assert.deepEqual(body.data, [{
             datetime: "2026-08-14T06:00:00.000Z",
+            weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
             description: "few clouds",
             uvi: "4.1",
             temp: "30",

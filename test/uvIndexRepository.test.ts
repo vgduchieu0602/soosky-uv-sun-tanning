@@ -41,11 +41,25 @@ describe("CachedUvIndexForecastRepository", () => {
         const upstream: UvIndexForecastRepository = {
             getDailyUvForecast: async () => {
                 dailyCalls += 1;
-                return [{ datetime: new Date(0), description: "clear sky", uvi: dailyCalls, temp: 30, pop: 0 }];
+                return [{
+                    datetime: new Date(0),
+                    weather: expectedWeather("clear sky"),
+                    description: "clear sky",
+                    uvi: dailyCalls,
+                    temp: 30,
+                    pop: 0,
+                }];
             },
             getHourlyUvForecast: async () => {
                 hourlyCalls += 1;
-                return [{ datetime: new Date(0), description: "clear sky", uvi: hourlyCalls, temp: 30, pop: 0 }];
+                return [{
+                    datetime: new Date(0),
+                    weather: expectedWeather("clear sky"),
+                    description: "clear sky",
+                    uvi: hourlyCalls,
+                    temp: 30,
+                    pop: 0,
+                }];
             },
         };
         const repository = new CachedUvIndexForecastRepository(
@@ -116,11 +130,11 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         );
 
         assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), [
-            { datetime: new Date(82_800_000), description: "06:00", uvi: 1, temp: 30, pop: 0 },
-            { datetime: new Date(93_600_000), description: "09:00", uvi: 3, temp: 30, pop: 0 },
-            { datetime: new Date(104_400_000), description: "12:00", uvi: 5, temp: 30, pop: 0 },
-            { datetime: new Date(115_200_000), description: "15:00", uvi: 6, temp: 30, pop: 0 },
-            { datetime: new Date(126_000_000), description: "18:00", uvi: 7, temp: 30, pop: 0 },
+            expectedHourlyPoint(82_800, "06:00", 1),
+            expectedHourlyPoint(93_600, "09:00", 3),
+            expectedHourlyPoint(104_400, "12:00", 5),
+            expectedHourlyPoint(115_200, "15:00", 6),
+            expectedHourlyPoint(126_000, "18:00", 7),
         ]);
     });
 
@@ -132,13 +146,14 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                     dt: 0,
                     temp: { day: 32.82 },
                     uvi: 0,
-                    weather: [{ description: "broken clouds" }],
+                    weather: [providerWeather("broken clouds")],
                 }],
             }), { status: 200 }),
         );
 
         assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
             datetime: new Date(0),
+            weather: expectedWeather("broken clouds"),
             description: "broken clouds",
             uvi: 0,
             temp: 32.82,
@@ -157,11 +172,11 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 return new Response(JSON.stringify({
                     timezone_offset: 0,
                     data: isDaily
-                        ? [{ dt: 86_400, temp: { day: 29.5 }, uvi: 6.2, pop: 0.7, weather: [{ description: "light rain" }] }]
+                        ? [{ dt: 86_400, temp: { day: 29.5 }, uvi: 6.2, pop: 0.7, weather: [providerWeather("light rain")] }]
                         : [
-                            { dt: 21_600, temp: 30, uvi: 1, pop: 0, weather: [{ description: "first" }] },
-                            { dt: 25_200, temp: 30, uvi: 2, pop: 0, weather: [{ description: "skip one" }] },
-                            { dt: 32_400, temp: 31, uvi: 4, pop: 0.1, weather: [{ description: "three hours" }] },
+                            { dt: 21_600, temp: 30, uvi: 1, pop: 0, weather: [providerWeather("first")] },
+                            { dt: 25_200, temp: 30, uvi: 2, pop: 0, weather: [providerWeather("skip one")] },
+                            { dt: 32_400, temp: 31, uvi: 4, pop: 0.1, weather: [providerWeather("three hours")] },
                         ],
                 }), { status: 200 });
             },
@@ -170,10 +185,17 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         const daily = await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 });
         const hourly = await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 });
 
-        assert.deepEqual(daily, [{ datetime: new Date(86_400_000), description: "light rain", uvi: 6.2, temp: 29.5, pop: 0.7 }]);
+        assert.deepEqual(daily, [{
+            datetime: new Date(86_400_000),
+            weather: expectedWeather("light rain"),
+            description: "light rain",
+            uvi: 6.2,
+            temp: 29.5,
+            pop: 0.7,
+        }]);
         assert.deepEqual(hourly, [
-            { datetime: new Date(21_600_000), description: "first", uvi: 1, temp: 30, pop: 0 },
-            { datetime: new Date(32_400_000), description: "three hours", uvi: 4, temp: 31, pop: 0.1 },
+            expectedHourlyPoint(21_600, "first", 1),
+            { ...expectedHourlyPoint(32_400, "three hours", 4), temp: 31, pop: 0.1 },
         ]);
         assert.deepEqual(requestedUrls.map((url) => url.pathname), [
             "/data/4.0/onecall/timeline/1day",
@@ -184,5 +206,17 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
 });
 
 function hourlyStep (dt: number, description: string, uvi: number): object {
-    return { dt, temp: 30, uvi, pop: 0, weather: [{ description }] };
+    return { dt, temp: 30, uvi, pop: 0, weather: [providerWeather(description)] };
+}
+
+function providerWeather (description: string): object {
+    return { id: 500, main: "Rain", description, icon: "10d" };
+}
+
+function expectedWeather (description: string): object[] {
+    return [{ code: "500d", mainWeather: "Rain", description, icon: "10d" }];
+}
+
+function expectedHourlyPoint (dt: number, description: string, uvi: number): object {
+    return { datetime: new Date(dt * 1000), weather: expectedWeather(description), description, uvi, temp: 30, pop: 0 };
 }
