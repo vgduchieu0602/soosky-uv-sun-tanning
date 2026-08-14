@@ -7,13 +7,17 @@ export { OpenWeatherMapUvIndexForecastRepository as default };
 
 const DAILY_TIMELINE_URL = "https://api.openweathermap.org/data/4.0/onecall/timeline/1day";
 const HOURLY_TIMELINE_URL = "https://api.openweathermap.org/data/4.0/onecall/timeline/1h";
-const HOURLY_SAMPLE_INTERVAL = 3;
+const HOUR_IN_SECONDS = 60 * 60;
+const DAY_IN_SECONDS = 24 * HOUR_IN_SECONDS;
+const HOURLY_LOCAL_HOURS = new Set([6, 9, 12, 15, 18]);
 
 interface OpenWeatherMapTimelineResponse {
     data?: OpenWeatherMapForecastStep[];
+    timezone_offset?: number;
 }
 
 interface OpenWeatherMapForecastStep {
+    dt?: number;
     temp?: number | { day?: number };
     uvi?: number;
     pop?: number;
@@ -27,21 +31,26 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
     ) {}
 
     public async getDailyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
-        const steps = await this._fetchTimeline(DAILY_TIMELINE_URL, coordinates);
-        return steps.map((step) => this._toForecastPoint(step, "daily"));
+        const timeline = await this._fetchTimeline(DAILY_TIMELINE_URL, coordinates);
+        return timeline.data.map((step) => this._toForecastPoint(step, "daily"));
     }
 
     public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
-        const steps = await this._fetchTimeline(HOURLY_TIMELINE_URL, coordinates);
-        return steps
-            .filter((_step, index) => index % HOURLY_SAMPLE_INTERVAL === 0)
+        const timeline = await this._fetchTimeline(HOURLY_TIMELINE_URL, coordinates);
+        const timezoneOffset = timeline.timezone_offset;
+        if (typeof timezoneOffset !== "number" || !Number.isFinite(timezoneOffset)) {
+            throw new UpstreamUnavailableError("Weather provider response is incomplete.");
+        }
+
+        return timeline.data
+            .filter((step) => isRequestedHourlySlot(step.dt, timezoneOffset))
             .map((step) => this._toForecastPoint(step, "hourly"));
     }
 
     private async _fetchTimeline (
         endpoint: string,
         coordinates: UvIndexCoordinates,
-    ): Promise<OpenWeatherMapForecastStep[]> {
+    ): Promise<OpenWeatherMapTimelineResponse & { data: OpenWeatherMapForecastStep[] }> {
         const url = new URL(endpoint);
         url.searchParams.set("lat", String(coordinates.lat));
         url.searchParams.set("lon", String(coordinates.lon));
@@ -72,7 +81,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
         }
 
-        return payload.data;
+        return payload as OpenWeatherMapTimelineResponse & { data: OpenWeatherMapForecastStep[] };
     }
 
     private _toForecastPoint (
@@ -109,4 +118,11 @@ function getDailyTemperature (temperature: OpenWeatherMapForecastStep["temp"]): 
     }
 
     return undefined;
+}
+
+function isRequestedHourlySlot (timestamp: unknown, timezoneOffset: number): boolean {
+    if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) return false;
+
+    const localSecondOfDay = ((timestamp + timezoneOffset) % DAY_IN_SECONDS + DAY_IN_SECONDS) % DAY_IN_SECONDS;
+    return localSecondOfDay % HOUR_IN_SECONDS === 0 && HOURLY_LOCAL_HOURS.has(localSecondOfDay / HOUR_IN_SECONDS);
 }

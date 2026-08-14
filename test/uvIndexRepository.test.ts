@@ -97,6 +97,33 @@ describe("OpenWeatherMapUvIndexRepository", () => {
 });
 
 describe("OpenWeatherMapUvIndexForecastRepository", () => {
+    it("returns only local 06:00 through 18:00 three-hour hourly forecast slots", async () => {
+        const repository = new OpenWeatherMapUvIndexForecastRepository(
+            "test-key",
+            async (): Promise<Response> => new Response(JSON.stringify({
+                timezone_offset: 7 * 60 * 60,
+                data: [
+                    hourlyStep(82_800, "06:00", 1),
+                    hourlyStep(86_400, "07:00", 2),
+                    hourlyStep(93_600, "09:00", 3),
+                    hourlyStep(100_800, "11:00", 4),
+                    hourlyStep(104_400, "12:00", 5),
+                    hourlyStep(115_200, "15:00", 6),
+                    hourlyStep(126_000, "18:00", 7),
+                    hourlyStep(129_600, "19:00", 8),
+                ],
+            }), { status: 200 }),
+        );
+
+        assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), [
+            { description: "06:00", uvi: 1, temp: 30, pop: 0 },
+            { description: "09:00", uvi: 3, temp: 30, pop: 0 },
+            { description: "12:00", uvi: 5, temp: 30, pop: 0 },
+            { description: "15:00", uvi: 6, temp: 30, pop: 0 },
+            { description: "18:00", uvi: 7, temp: 30, pop: 0 },
+        ]);
+    });
+
     it("treats a missing daily pop as zero precipitation probability", async () => {
         const repository = new OpenWeatherMapUvIndexForecastRepository(
             "test-key",
@@ -126,13 +153,13 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 requestedUrls.push(url);
                 const isDaily = url.pathname.endsWith("/1day");
                 return new Response(JSON.stringify({
+                    timezone_offset: 0,
                     data: isDaily
                         ? [{ temp: { day: 29.5 }, uvi: 6.2, pop: 0.7, weather: [{ description: "light rain" }] }]
                         : [
-                            { temp: 30, uvi: 1, pop: 0, weather: [{ description: "first" }] },
-                            { temp: 30, uvi: 2, pop: 0, weather: [{ description: "skip one" }] },
-                            { temp: 30, uvi: 3, pop: 0, weather: [{ description: "skip two" }] },
-                            { temp: 31, uvi: 4, pop: 0.1, weather: [{ description: "three hours" }] },
+                            { dt: 21_600, temp: 30, uvi: 1, pop: 0, weather: [{ description: "first" }] },
+                            { dt: 25_200, temp: 30, uvi: 2, pop: 0, weather: [{ description: "skip one" }] },
+                            { dt: 32_400, temp: 31, uvi: 4, pop: 0.1, weather: [{ description: "three hours" }] },
                         ],
                 }), { status: 200 });
             },
@@ -153,3 +180,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         assert.ok(requestedUrls.every((url) => url.searchParams.get("units") === "metric"));
     });
 });
+
+function hourlyStep (dt: number, description: string, uvi: number): object {
+    return { dt, temp: 30, uvi, pop: 0, weather: [{ description }] };
+}

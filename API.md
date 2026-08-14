@@ -122,7 +122,7 @@ Response `200`:
 
 ### `GET /api/v1/uv-index/hourly`
 
-Returns the One Call hourly timeline sampled at three-hour intervals. Results are cached for 6 hours.
+Returns only the One Call hourly records at 06:00, 09:00, 12:00, 15:00, and 18:00 in the location's local timezone. Results are cached for 6 hours.
 
 Response item fields for daily and hourly:
 
