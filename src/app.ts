@@ -21,9 +21,15 @@ const {
     },
 } = config;
 
-const CURRENT_UV_INDEX_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const DAILY_UV_FORECAST_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
-const HOURLY_UV_FORECAST_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+//===Production===
+// const CURRENT_UV_INDEX_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+// const DAILY_UV_FORECAST_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+// const HOURLY_UV_FORECAST_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+//===Test===
+const CURRENT_UV_INDEX_CACHE_TTL_MS = 10 * 60 * 1000;
+const DAILY_UV_FORECAST_CACHE_TTL_MS = 15 * 60 * 1000;
+const HOURLY_UV_FORECAST_CACHE_TTL_MS = 15 * 60 * 1000;
 const currentUvIndexRepository = new CachedCurrentUvIndexRepository(
     new OpenWeatherMapCurrentUvIndexRepository(config.openWeatherMap.apiKey),
     CURRENT_UV_INDEX_CACHE_TTL_MS,

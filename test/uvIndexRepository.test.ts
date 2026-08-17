@@ -5,7 +5,7 @@ import OpenWeatherMapUvIndexForecastRepository from "../src/adapters/openweather
 import UvIndexForecastRepository from "../src/domain/repositories/IUvIndexForecastRepository.js";
 
 describe("CachedUvIndexForecastRepository", () => {
-    it("caches daily and hourly forecasts for 12 hours", async () => {
+    it("caches daily and hourly forecasts for 15 minutes", async () => {
         let now = 1_000;
         let dailyCalls = 0;
         let hourlyCalls = 0;
@@ -35,17 +35,17 @@ describe("CachedUvIndexForecastRepository", () => {
         };
         const repository = new CachedUvIndexForecastRepository(
             upstream,
-            12 * 60 * 60 * 1000,
-            12 * 60 * 60 * 1000,
+            15 * 60 * 1000,
+            15 * 60 * 1000,
             () => now,
         );
 
         await repository.getDailyUvForecast({ lat: 10.7, lon: 106.7 });
         await repository.getHourlyUvForecast({ lat: 10.7, lon: 106.7 });
-        now += 6 * 60 * 60 * 1000;
+        now += 10 * 60 * 1000;
         const daily = await repository.getDailyUvForecast({ lat: 10.7, lon: 106.7 });
         const hourly = await repository.getHourlyUvForecast({ lat: 10.7, lon: 106.7 });
-        now += 6 * 60 * 60 * 1000;
+        now += 5 * 60 * 1000;
         const refreshedDaily = await repository.getDailyUvForecast({ lat: 10.7, lon: 106.7 });
         const refreshedHourly = await repository.getHourlyUvForecast({ lat: 10.7, lon: 106.7 });
 

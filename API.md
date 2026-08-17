@@ -70,7 +70,7 @@ Both forecast endpoints require `lat` (`-90` to `90`) and `lon` (`-180` to `180`
 
 ### `GET /api/v1/uv-index`
 
-Uses OpenWeatherMap [Current Weather](https://openweathermap.org/api/current?collection=current_forecast) and is cached for 6 hours per coordinate pair.
+Uses OpenWeatherMap [Current Weather](https://openweathermap.org/api/current?collection=current_forecast) and is cached for 10 minutes per coordinate pair in this test build.
 
 Response `200`:
 
@@ -97,7 +97,7 @@ Response `200`:
 
 ### `GET /api/v1/uv-index/daily`
 
-Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and groups its 3-hour records into one result per local calendar day. The selected record is the forecast closest to 12:00 local time. Results are cached for 12 hours.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and groups its 3-hour records into one result per local calendar day. The selected record is the forecast closest to 12:00 local time. Results are cached for 15 minutes in this test build.
 
 `GET /api/v1/uv-forecast/daily` is kept as a backward-compatible alias.
 
@@ -128,7 +128,7 @@ Response `200`:
 
 ### `GET /api/v1/uv-index/hourly`
 
-Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns its 3-hour forecast records in provider order. Results are cached for 12 hours.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns its 3-hour forecast records in provider order. Results are cached for 15 minutes in this test build.
 
 `GET /api/v1/uv-forecast/hourly` is kept as a backward-compatible alias.
 
