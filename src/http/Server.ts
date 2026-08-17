@@ -326,8 +326,10 @@ const SKIN_TONE_RANK: Record<DesiredSkin, number> = {
     "Dark Skin": 5,
 };
 const MINIMUM_SKIN_AGE = 1;
-const MAXIMUM_SKIN_AGE = 100;
 const MAXIMUM_SKIN_AGE_RANGE = 20;
+const INVALID_TARGET_TONE_SUGGESTION = "Giá trị targetTone không hợp lệ.";
+const INVALID_SKIN_AGE_SUGGESTION = "Độ tuổi phải lớn hơn 0.";
+const INVALID_SKIN_AGE_RANGE_SUGGESTION = "Khoảng tuổi dự đoán không hợp lệ.";
 
 function readScanError (body: unknown): SkinScanError | undefined {
     if (!isRecord(body) || !isRecord(body.errmsg)) return undefined;
@@ -362,17 +364,16 @@ function readTanningRoutineQuery (
         || typeof skin.skinType !== "string" || !SKIN_TYPES.has(skin.skinType as SkinScanData["skinType"])
     ) return tanningInputError("currentSkin must contain valid scan-skin values.");
 
-    const skinAge = normalizeSkinAge(skin);
-    if (skinAge === undefined) {
-        return tanningInputError("currentSkin.skinAge must be a valid age range between 1 and 100 years, with a maximum 20-year span.");
-    }
+    const skinAgeInput = normalizeSkinAge(skin);
+    if ("suggestion" in skinAgeInput) return tanningInputError(skinAgeInput.suggestion);
+    const skinAge = skinAgeInput.skinAge;
 
     if (!SKIN_TONES.has(desiredSkin as DesiredSkin)) {
-        return tanningInputError("targetTone must be one of the supported skin tones.");
+        return tanningInputError(INVALID_TARGET_TONE_SUGGESTION);
     }
 
     if (SKIN_TONE_RANK[desiredSkin as DesiredSkin] < SKIN_TONE_RANK[skin.skinTone as DesiredSkin]) {
-        return tanningInputError("targetTone must be the same as or darker than current skin tone.");
+        return tanningInputError(INVALID_TARGET_TONE_SUGGESTION);
     }
 
     return {
@@ -400,28 +401,43 @@ function readDesiredSkin (
     return { desiredSkin: (targetTone ?? desiredSkin) as string };
 }
 
-function normalizeSkinAge (skin: Record<string, unknown>): string | undefined {
+function normalizeSkinAge (
+    skin: Record<string, unknown>,
+): { skinAge: string } | { suggestion: string } {
     if (typeof skin.skinAge === "string") {
-        const match = /^(\d{1,3})\s*-\s*(\d{1,3})$/.exec(skin.skinAge.trim());
-        if (!match) return undefined;
+        const value = skin.skinAge.trim();
+        const age = parseInteger(value);
+        if (age !== undefined) return normalizeSingleSkinAge(age);
+
+        const match = /^([+-]?\d+)\s*-\s*([+-]?\d+)$/.exec(value);
+        if (!match) return { suggestion: INVALID_SKIN_AGE_RANGE_SUGGESTION };
         const minimum = Number(match[1]);
         const maximum = Number(match[2]);
-        if (!isValidSkinAgeRange(minimum, maximum)) return undefined;
-        return String(minimum) + "-" + String(maximum);
+        if (minimum < MINIMUM_SKIN_AGE || maximum < MINIMUM_SKIN_AGE) {
+            return { suggestion: INVALID_SKIN_AGE_SUGGESTION };
+        }
+        if (minimum > maximum || maximum - minimum > MAXIMUM_SKIN_AGE_RANGE) {
+            return { suggestion: INVALID_SKIN_AGE_RANGE_SUGGESTION };
+        }
+        return { skinAge: String(minimum) + "-" + String(maximum) };
     }
 
-    if (typeof skin.age === "number" && Number.isInteger(skin.age) && isValidSkinAgeRange(skin.age, skin.age)) {
-        return String(skin.age) + "-" + String(skin.age);
+    if (typeof skin.age === "number" && Number.isInteger(skin.age)) {
+        return normalizeSingleSkinAge(skin.age);
     }
 
-    return undefined;
+    return { suggestion: INVALID_SKIN_AGE_RANGE_SUGGESTION };
 }
 
-function isValidSkinAgeRange (minimum: number, maximum: number): boolean {
-    return minimum >= MINIMUM_SKIN_AGE
-        && maximum <= MAXIMUM_SKIN_AGE
-        && minimum <= maximum
-        && maximum - minimum <= MAXIMUM_SKIN_AGE_RANGE;
+function parseInteger (value: string): number | undefined {
+    if (!/^[+-]?\d+$/.test(value)) return undefined;
+    const age = Number(value);
+    return Number.isSafeInteger(age) ? age : undefined;
+}
+
+function normalizeSingleSkinAge (age: number): { skinAge: string } | { suggestion: string } {
+    if (age < MINIMUM_SKIN_AGE) return { suggestion: INVALID_SKIN_AGE_SUGGESTION };
+    return { skinAge: String(age) + "-" + String(age) };
 }
 
 function tanningInputError (suggestion: string): { errmsg: { errorCode: "ERR-99"; suggestion: string } } {

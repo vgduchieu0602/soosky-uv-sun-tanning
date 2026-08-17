@@ -59,8 +59,32 @@ describe("POST /api/v1/tanning-routine", () => {
         });
     });
 
-    it("rejects invalid skin age ranges", async () => {
-        for (const skinAge of ["-5", "150", "10-90", "18-80"]) {
+    it("rejects an age below one", async () => {
+        const { skinAge: _skinAge, ...skinWithoutAge } = currentSkin;
+        const response = await fetch(baseUrl + "/api/v1/tanning-routine", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ currentSkin: { ...skinWithoutAge, age: -5 }, desiredSkin: "Medium Skin" }),
+        });
+
+        assert.equal(response.status, 400);
+        assert.deepEqual(await response.json(), {
+            errmsg: { errorCode: "ERR-99", suggestion: "Độ tuổi phải lớn hơn 0." },
+        });
+    });
+
+    it("allows an age range above 100 when its span is valid", async () => {
+        const response = await fetch(baseUrl + "/api/v1/tanning-routine", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ currentSkin: { ...currentSkin, skinAge: "150-160" }, desiredSkin: "Medium Skin" }),
+        });
+
+        assert.equal(response.status, 200);
+    });
+
+    it("rejects invalid or excessively wide skin-age ranges", async () => {
+        for (const skinAge of ["10-90", "18-80", "30-20", "not-an-age"]) {
             const response = await fetch(baseUrl + "/api/v1/tanning-routine", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
@@ -69,7 +93,7 @@ describe("POST /api/v1/tanning-routine", () => {
 
             assert.equal(response.status, 400, skinAge);
             assert.deepEqual(await response.json(), {
-                errmsg: { errorCode: "ERR-99", suggestion: "currentSkin.skinAge must be a valid age range between 1 and 100 years, with a maximum 20-year span." },
+                errmsg: { errorCode: "ERR-99", suggestion: "Khoảng tuổi dự đoán không hợp lệ." },
             }, skinAge);
         }
     });
@@ -88,7 +112,7 @@ describe("POST /api/v1/tanning-routine", () => {
         assert.deepEqual(await response.json(), {
             errmsg: {
                 errorCode: "ERR-99",
-                suggestion: "targetTone must be the same as or darker than current skin tone.",
+                suggestion: "Giá trị targetTone không hợp lệ.",
             },
         });
     });
