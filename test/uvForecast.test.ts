@@ -115,15 +115,15 @@ describe("UV forecast endpoints", () => {
         assert.equal(hourlyResponse.status, 200);
     });
 
-    it("rejects invalid coordinates on current, daily, and hourly forecast paths", async () => {
+    it("rejects non-numeric coordinates with an invalid number-format message", async () => {
         for (const path of ["/api/v1/uv-index", "/api/v1/uv-forecast/daily", "/api/v1/uv-forecast/hourly"]) {
-            const response = await fetch(baseUrl + path + "?lat=abc&lon=xyz");
+            const response = await fetch(baseUrl + path + "?lat=%40%23%24&lon=xyz");
 
             assert.equal(response.status, 400, path);
             assert.deepEqual(await response.json(), {
                 ok: false,
                 code: "BAD_REQUEST",
-                reason: "Query parameter 'lat' must be between -90 and 90.",
+                reason: "Query parameter 'lat' must be a valid number.",
             }, path);
         }
     });

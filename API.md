@@ -108,7 +108,7 @@ Response `200`:
   "ok": true,
   "data": [
     {
-      "datetime": "2026-08-14T07:00:00+07:00",
+      "datetime": "2026-08-14T00:00:00.000Z",
       "weather": [
         {
           "code": "500d",
@@ -136,7 +136,7 @@ Response item fields for daily and hourly:
 
 | Field | Meaning |
 | --- | --- |
-| `datetime` | Local forecast time in ISO 8601, including the OpenWeatherMap offset (for example `+07:00`) |
+| `datetime` | Forecast time in ISO 8601 UTC (`Z`, UTC+0) |
 | `weather` | OpenWeatherMap weather conditions; each item has `code`, `mainWeather`, `description`, and `icon` |
 | `description` | Weather description from OpenWeatherMap |
 | `uvi` | UV index; `null` because Forecast5 does not provide it |

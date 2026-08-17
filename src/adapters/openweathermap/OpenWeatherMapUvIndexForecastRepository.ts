@@ -43,8 +43,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
 
         const city = isRecord(payload.city) ? payload.city : undefined;
         const timezoneOffset = toFiniteNumber(city?.timezone) ?? 0;
-        return selectDailySteps(payload.list as OpenWeatherMapForecastStep[], timezoneOffset)
-            .map((step) => toForecastPoint(step, timezoneOffset));
+        return selectDailySteps(payload.list as OpenWeatherMapForecastStep[], timezoneOffset).map(toForecastPoint);
     }
 
     public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
@@ -53,9 +52,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
         }
 
-        const city = isRecord(payload.city) ? payload.city : undefined;
-        const timezoneOffset = toFiniteNumber(city?.timezone) ?? 0;
-        return (payload.list as OpenWeatherMapForecastStep[]).map((step) => toForecastPoint(step, timezoneOffset));
+        return (payload.list as OpenWeatherMapForecastStep[]).map(toForecastPoint);
     }
 
     private async _fetchPayload (endpoint: string, coordinates: UvIndexCoordinates): Promise<unknown> {
@@ -130,11 +127,11 @@ function distanceFromLocalNoon (timestamp: unknown, timezoneOffset: number): num
     return Math.abs(localSecondOfDay - DAILY_TARGET_SECOND);
 }
 
-function toForecastPoint (step: OpenWeatherMapForecastStep, timezoneOffset: number): UvIndexForecastPoint {
+function toForecastPoint (step: OpenWeatherMapForecastStep): UvIndexForecastPoint {
     const weather = mapForecastWeather(step.weather);
 
     return {
-        datetime: getForecastDatetime(step.dt, timezoneOffset),
+        datetime: getForecastDatetime(step.dt),
         weather,
         description: weather[0]?.description ?? null,
         uvi: null,
@@ -143,30 +140,12 @@ function toForecastPoint (step: OpenWeatherMapForecastStep, timezoneOffset: numb
     };
 }
 
-function getForecastDatetime (timestamp: unknown, timezoneOffset: number): string | null {
+function getForecastDatetime (timestamp: unknown): string | null {
     const value = toFiniteNumber(timestamp);
     if (value === null) return null;
 
-    const datetime = new Date((value + timezoneOffset) * 1000);
-    if (Number.isNaN(datetime.getTime())) return null;
-
-    const sign = timezoneOffset < 0 ? "-" : "+";
-    const absoluteOffset = Math.abs(timezoneOffset);
-    const offsetHours = Math.floor(absoluteOffset / HOUR_IN_SECONDS);
-    const offsetMinutes = Math.floor((absoluteOffset % HOUR_IN_SECONDS) / 60);
-
-    return datetime.getUTCFullYear()
-        + "-" + pad(datetime.getUTCMonth() + 1)
-        + "-" + pad(datetime.getUTCDate())
-        + "T" + pad(datetime.getUTCHours())
-        + ":" + pad(datetime.getUTCMinutes())
-        + ":" + pad(datetime.getUTCSeconds())
-        + sign + pad(offsetHours)
-        + ":" + pad(offsetMinutes);
-}
-
-function pad (value: number): string {
-    return String(value).padStart(2, "0");
+    const datetime = new Date(value * 1000);
+    return Number.isNaN(datetime.getTime()) ? null : datetime.toISOString();
 }
 
 function getPrecipitationProbability (value: unknown): number | null {

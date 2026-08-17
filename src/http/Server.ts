@@ -288,7 +288,11 @@ function parseCoordinate (value: unknown, name: string, minimum: number, maximum
 
     const coordinate = Number(value);
 
-    if (!Number.isFinite(coordinate) || coordinate < minimum || coordinate > maximum) {
+    if (!Number.isFinite(coordinate)) {
+        throw new ClientError("Query parameter '" + name + "' must be a valid number.");
+    }
+
+    if (coordinate < minimum || coordinate > maximum) {
         throw new ClientError(
             "Query parameter '" + name + "' must be between " + minimum + " and " + maximum + ".",
         );

@@ -6,7 +6,7 @@ export interface UvIndexForecastWeather {
 }
 
 export interface UvIndexForecastPoint {
-    /** Local forecast time with the UTC offset reported by OpenWeatherMap. */
+    /** Forecast time in ISO 8601 UTC. */
     datetime: string | null;
     weather: UvIndexForecastWeather[];
     description: string | null;

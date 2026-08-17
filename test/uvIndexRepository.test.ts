@@ -77,7 +77,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
 
         assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), [
             {
-                datetime: "1970-01-02T07:00:00+07:00",
+                datetime: "1970-01-02T00:00:00.000Z",
                 weather: expectedWeather("first forecast"),
                 description: "first forecast",
                 uvi: null,
@@ -85,7 +85,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 pop: 0,
             },
             {
-                datetime: "1970-01-02T10:00:00+07:00",
+                datetime: "1970-01-02T03:00:00.000Z",
                 weather: expectedWeather("next forecast"),
                 description: "next forecast",
                 uvi: null,
@@ -116,14 +116,14 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         );
 
         assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
-            datetime: "1970-01-01T12:00:00+00:00",
+            datetime: "1970-01-01T12:00:00.000Z",
             weather: expectedWeather("midday rain"),
             description: "midday rain",
             uvi: null,
             temp: 30,
             pop: 0,
         }, {
-            datetime: "1970-01-02T12:00:00+00:00",
+            datetime: "1970-01-02T12:00:00.000Z",
             weather: expectedWeather("next midday"),
             description: "next midday",
             uvi: null,
