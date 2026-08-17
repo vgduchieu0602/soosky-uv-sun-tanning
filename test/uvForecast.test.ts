@@ -15,31 +15,40 @@ describe("UV forecast endpoints", () => {
                 uv: {
                     getCurrentUvIndex: {
                         execute: async () => ({
-                            description: "overcast clouds",
-                            uvi: null,
-                            temp: 31.8,
-                            weather: [{ code: "804d", mainWeather: "Clouds", description: "overcast clouds", icon: "04d" }],
+                            data: {
+                                description: "overcast clouds",
+                                uvi: null,
+                                temp: 31.8,
+                                weather: [{ code: "804d", mainWeather: "Clouds", description: "overcast clouds", icon: "04d" }],
+                            },
+                            cache: "upstream" as const,
                         }),
                     },
                     getDailyUvForecast: {
-                        execute: async () => [{
-                            datetime: new Date("2026-08-14T00:00:00.000Z"),
-                            weather: [{ code: "500d", mainWeather: "Rain", description: "light rain", icon: "10d" }],
-                            description: "light rain",
-                            uvi: 6.2,
-                            temp: 29.5,
-                            pop: 0.7,
-                        }],
+                        execute: async () => ({
+                            data: [{
+                                datetime: new Date("2026-08-14T00:00:00.000Z"),
+                                weather: [{ code: "500d", mainWeather: "Rain", description: "light rain", icon: "10d" }],
+                                description: "light rain",
+                                uvi: 6.2,
+                                temp: 29.5,
+                                pop: 0.7,
+                            }],
+                            cache: "cached" as const,
+                        }),
                     },
                     getHourlyUvForecast: {
-                        execute: async () => [{
-                            datetime: new Date("2026-08-14T06:00:00.000Z"),
-                            weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
-                            description: "few clouds",
-                            uvi: null,
-                            temp: 30,
-                            pop: null,
-                        }],
+                        execute: async () => ({
+                            data: [{
+                                datetime: new Date("2026-08-14T06:00:00.000Z"),
+                                weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
+                                description: "few clouds",
+                                uvi: null,
+                                temp: 30,
+                                pop: null,
+                            }],
+                            cache: "upstream" as const,
+                        }),
                     },
                 },
             } as never,
@@ -66,6 +75,7 @@ describe("UV forecast endpoints", () => {
                 temp: "31.8",
                 weather: [{ code: "804d", mainWeather: "Clouds", description: "overcast clouds", icon: "04d" }],
             },
+            meta: { cache: "upstream" },
         });
     });
 
@@ -78,6 +88,7 @@ describe("UV forecast endpoints", () => {
 
         assert.equal(response.status, 200);
         assert.equal(body.ok, true);
+        assert.deepEqual((body as { meta?: unknown }).meta, { cache: "cached" });
         assert.deepEqual(body.data, [{
             datetime: "2026-08-14T00:00:00.000Z",
             weather: [{ code: "500d", mainWeather: "Rain", description: "light rain", icon: "10d" }],
@@ -97,6 +108,7 @@ describe("UV forecast endpoints", () => {
 
         assert.equal(response.status, 200);
         assert.equal(body.ok, true);
+        assert.deepEqual((body as { meta?: unknown }).meta, { cache: "upstream" });
         assert.deepEqual(body.data, [{
             datetime: "2026-08-14T06:00:00.000Z",
             weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],

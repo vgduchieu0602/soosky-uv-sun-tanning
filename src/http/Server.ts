@@ -208,8 +208,8 @@ class Server {
             throw new Error("UV index use case is not configured.");
         }
 
-        const data = await this._useCases.uv.getCurrentUvIndex.execute(this._readCoordinates(request));
-        response.json({ ok: true, data: formatResponseData(data, null) });
+        const result = await this._useCases.uv.getCurrentUvIndex.execute(this._readCoordinates(request));
+        response.json({ ok: true, data: formatResponseData(result.data, null), meta: { cache: result.cache } });
     }
 
     private async _GET_uvIndexDailyForecast (request: Request, response: Response): Promise<void> {
@@ -217,8 +217,8 @@ class Server {
             throw new Error("UV index use case is not configured.");
         }
 
-        const data = await this._useCases.uv.getDailyUvForecast.execute(this._readCoordinates(request));
-        response.json({ ok: true, data: formatResponseData(data, null) });
+        const result = await this._useCases.uv.getDailyUvForecast.execute(this._readCoordinates(request));
+        response.json({ ok: true, data: formatResponseData(result.data, null), meta: { cache: result.cache } });
     }
 
     private async _GET_uvIndexHourlyForecast (request: Request, response: Response): Promise<void> {
@@ -226,8 +226,8 @@ class Server {
             throw new Error("UV index use case is not configured.");
         }
 
-        const data = await this._useCases.uv.getHourlyUvForecast.execute(this._readCoordinates(request));
-        response.json({ ok: true, data: formatResponseData(data, null) });
+        const result = await this._useCases.uv.getHourlyUvForecast.execute(this._readCoordinates(request));
+        response.json({ ok: true, data: formatResponseData(result.data, null), meta: { cache: result.cache } });
     }
 
     private async _POST_skinScan (request: Request, response: Response): Promise<void> {

@@ -1,4 +1,5 @@
 import { UvIndexForecastPoint } from "../../domain/entities/UvIndexForecastPoint.js";
+import { DataFetchResult } from "../../domain/entities/DataFetchResult.js";
 import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
 import UvIndexForecastRepository from "../../domain/repositories/IUvIndexForecastRepository.js";
 
@@ -20,7 +21,7 @@ class CachedUvIndexForecastRepository implements UvIndexForecastRepository {
         private readonly _now: () => number = Date.now,
     ) {}
 
-    public async getDailyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
+    public async getDailyUvForecast (coordinates: UvIndexCoordinates): Promise<DataFetchResult<UvIndexForecastPoint[]>> {
         return this._getOrLoad(
             this._dailyCache,
             coordinates,
@@ -29,7 +30,7 @@ class CachedUvIndexForecastRepository implements UvIndexForecastRepository {
         );
     }
 
-    public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
+    public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<DataFetchResult<UvIndexForecastPoint[]>> {
         return this._getOrLoad(
             this._hourlyCache,
             coordinates,
@@ -42,18 +43,18 @@ class CachedUvIndexForecastRepository implements UvIndexForecastRepository {
         cache: Map<string, CacheEntry>,
         coordinates: UvIndexCoordinates,
         ttlMs: number,
-        load: () => Promise<UvIndexForecastPoint[]>,
-    ): Promise<UvIndexForecastPoint[]> {
+        load: () => Promise<DataFetchResult<UvIndexForecastPoint[]>>,
+    ): Promise<DataFetchResult<UvIndexForecastPoint[]>> {
         const key = coordinates.lat + ":" + coordinates.lon;
         const cached = cache.get(key);
         const now = this._now();
 
         if (cached && cached.expiresAt > now) {
-            return cached.value;
+            return { data: cached.value, cache: "cached" };
         }
 
-        const value = await load();
-        cache.set(key, { value, expiresAt: now + ttlMs });
-        return value;
+        const result = await load();
+        cache.set(key, { value: result.data, expiresAt: now + ttlMs });
+        return { data: result.data, cache: "upstream" };
     }
 }

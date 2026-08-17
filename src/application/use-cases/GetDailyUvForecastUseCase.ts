@@ -1,4 +1,5 @@
 import { UvIndexForecastPoint } from "../../domain/entities/UvIndexForecastPoint.js";
+import { DataFetchResult } from "../../domain/entities/DataFetchResult.js";
 import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
 import UvIndexForecastRepository from "../../domain/repositories/IUvIndexForecastRepository.js";
 
@@ -8,7 +9,7 @@ export { GetDailyUvForecastUseCase as default };
 class GetDailyUvForecastUseCase {
     public constructor (private readonly _uvIndexForecastRepository: UvIndexForecastRepository) {}
 
-    public async execute (query: GetDailyUvForecastQuery): Promise<UvIndexForecastPoint[]> {
+    public async execute (query: GetDailyUvForecastQuery): Promise<DataFetchResult<UvIndexForecastPoint[]>> {
         return this._uvIndexForecastRepository.getDailyUvForecast(query);
     }
 }

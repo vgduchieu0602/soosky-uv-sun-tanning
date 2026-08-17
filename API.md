@@ -26,8 +26,10 @@ npm run dev
 The UV endpoints use the standard envelope:
 
 ```json
-{ "ok": true, "data": {} }
+{ "ok": true, "data": {}, "meta": { "cache": "upstream" } }
 ```
+
+For every UV endpoint, `meta.cache` identifies where the returned data came from: `"upstream"` for a cache miss that fetched OpenWeatherMap, or `"cached"` for a cache hit.
 
 The skin-scan and tanning-routine endpoints return exactly one of the following shapes, with no `ok` field:
 
@@ -89,7 +91,8 @@ Response `200`:
         "icon": "04d"
       }
     ]
-  }
+  },
+  "meta": { "cache": "upstream" }
 }
 ```
 
@@ -122,13 +125,14 @@ Response `200`:
       "temp": "29.5",
       "pop": "0.7"
     }
-  ]
+  ],
+  "meta": { "cache": "cached" }
 }
 ```
 
 ### `GET /api/v1/uv-index/hourly`
 
-Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns its 3-hour forecast records in provider order. Results are cached for 15 minutes in this test build.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns only the next 24 hours: at most 8 records in provider order, at 3-hour intervals. Results are cached for 15 minutes in this test build.
 
 `GET /api/v1/uv-forecast/hourly` is kept as a backward-compatible alias.
 

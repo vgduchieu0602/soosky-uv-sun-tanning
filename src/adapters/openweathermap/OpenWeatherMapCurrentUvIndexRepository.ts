@@ -1,4 +1,5 @@
 import { CurrentUvIndex } from "../../domain/entities/CurrentUvIndex.js";
+import { DataFetchResult } from "../../domain/entities/DataFetchResult.js";
 import { UvIndexForecastWeather } from "../../domain/entities/UvIndexForecastPoint.js";
 import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
 import UpstreamUnavailableError from "../../domain/errors/UpstreamUnavailableError.js";
@@ -14,7 +15,7 @@ class OpenWeatherMapCurrentUvIndexRepository implements CurrentUvIndexRepository
         private readonly _fetch: typeof fetch = fetch,
     ) {}
 
-    public async getCurrentUvIndex (coordinates: UvIndexCoordinates): Promise<CurrentUvIndex> {
+    public async getCurrentUvIndex (coordinates: UvIndexCoordinates): Promise<DataFetchResult<CurrentUvIndex>> {
         const url = new URL(CURRENT_WEATHER_URL);
         url.searchParams.set("lat", String(coordinates.lat));
         url.searchParams.set("lon", String(coordinates.lon));
@@ -47,10 +48,13 @@ class OpenWeatherMapCurrentUvIndexRepository implements CurrentUvIndexRepository
 
         const weather = mapWeather(payload.weather);
         return {
-            description: weather[0]?.description ?? null,
-            uvi: null,
-            temp: isRecord(payload.main) ? toFiniteNumber(payload.main.temp) : null,
-            weather,
+            data: {
+                description: weather[0]?.description ?? null,
+                uvi: null,
+                temp: isRecord(payload.main) ? toFiniteNumber(payload.main.temp) : null,
+                weather,
+            },
+            cache: "upstream",
         };
     }
 }

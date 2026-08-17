@@ -1,8 +1,38 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import CachedCurrentUvIndexRepository from "../src/adapters/cache/CachedCurrentUvIndexRepository.js";
 import CachedUvIndexForecastRepository from "../src/adapters/cache/CachedUvIndexForecastRepository.js";
 import OpenWeatherMapUvIndexForecastRepository from "../src/adapters/openweathermap/OpenWeatherMapUvIndexForecastRepository.js";
+import CurrentUvIndexRepository from "../src/domain/repositories/ICurrentUvIndexRepository.js";
 import UvIndexForecastRepository from "../src/domain/repositories/IUvIndexForecastRepository.js";
+
+describe("CachedCurrentUvIndexRepository", () => {
+    it("identifies an upstream fetch and a cache hit", async () => {
+        let now = 1_000;
+        let calls = 0;
+        const upstream: CurrentUvIndexRepository = {
+            getCurrentUvIndex: async () => {
+                calls += 1;
+                return {
+                    data: { description: "clear sky", uvi: null, temp: 30, weather: expectedWeather("clear sky") },
+                    cache: "upstream",
+                };
+            },
+        };
+        const repository = new CachedCurrentUvIndexRepository(upstream, 10 * 60 * 1000, () => now);
+
+        const first = await repository.getCurrentUvIndex({ lat: 10.7, lon: 106.7 });
+        now += 9 * 60 * 1000;
+        const second = await repository.getCurrentUvIndex({ lat: 10.7, lon: 106.7 });
+        now += 60 * 1000;
+        const refreshed = await repository.getCurrentUvIndex({ lat: 10.7, lon: 106.7 });
+
+        assert.equal(first.cache, "upstream");
+        assert.equal(second.cache, "cached");
+        assert.equal(refreshed.cache, "upstream");
+        assert.equal(calls, 2);
+    });
+});
 
 describe("CachedUvIndexForecastRepository", () => {
     it("caches daily and hourly forecasts for 15 minutes", async () => {
@@ -12,25 +42,25 @@ describe("CachedUvIndexForecastRepository", () => {
         const upstream: UvIndexForecastRepository = {
             getDailyUvForecast: async () => {
                 dailyCalls += 1;
-                return [{
+                return { data: [{
                     datetime: "1970-01-01T00:00:00+00:00",
                     weather: expectedWeather("clear sky"),
                     description: "clear sky",
                     uvi: dailyCalls,
                     temp: 30,
                     pop: 0,
-                }];
+                }], cache: "upstream" };
             },
             getHourlyUvForecast: async () => {
                 hourlyCalls += 1;
-                return [{
+                return { data: [{
                     datetime: "1970-01-01T00:00:00+00:00",
                     weather: expectedWeather("clear sky"),
                     description: "clear sky",
                     uvi: hourlyCalls,
                     temp: 30,
                     pop: 0,
-                }];
+                }], cache: "upstream" };
             },
         };
         const repository = new CachedUvIndexForecastRepository(
@@ -49,10 +79,14 @@ describe("CachedUvIndexForecastRepository", () => {
         const refreshedDaily = await repository.getDailyUvForecast({ lat: 10.7, lon: 106.7 });
         const refreshedHourly = await repository.getHourlyUvForecast({ lat: 10.7, lon: 106.7 });
 
-        assert.equal(daily[0]?.uvi, 1);
-        assert.equal(hourly[0]?.uvi, 1);
-        assert.equal(refreshedDaily[0]?.uvi, 2);
-        assert.equal(refreshedHourly[0]?.uvi, 2);
+        assert.equal(daily.data[0]?.uvi, 1);
+        assert.equal(hourly.data[0]?.uvi, 1);
+        assert.equal(daily.cache, "cached");
+        assert.equal(hourly.cache, "cached");
+        assert.equal(refreshedDaily.data[0]?.uvi, 2);
+        assert.equal(refreshedHourly.data[0]?.uvi, 2);
+        assert.equal(refreshedDaily.cache, "upstream");
+        assert.equal(refreshedHourly.cache, "upstream");
         assert.equal(dailyCalls, 2);
         assert.equal(hourlyCalls, 2);
     });
@@ -75,7 +109,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
             },
         );
 
-        assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), [
+        assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), { data: [
             {
                 datetime: "1970-01-02T00:00:00.000Z",
                 weather: expectedWeather("first forecast"),
@@ -92,9 +126,29 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 temp: 31,
                 pop: 0.4,
             },
-        ]);
+        ], cache: "upstream" });
         assert.equal(requestUrl?.pathname, "/data/2.5/forecast");
         assert.equal(requestUrl?.searchParams.get("units"), "metric");
+    });
+
+    it("limits the hourly endpoint to the next 24 hours", async () => {
+        const repository = new OpenWeatherMapUvIndexForecastRepository(
+            "test-key",
+            async (): Promise<Response> => new Response(JSON.stringify({
+                list: Array.from({ length: 9 }, (_, index) => ({
+                    dt: index * 3 * 60 * 60,
+                    main: { temp: 30 },
+                    pop: 0,
+                    weather: [providerWeather("forecast " + index)],
+                })),
+            }), { status: 200 }),
+        );
+
+        const result = await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 });
+
+        assert.equal(result.data.length, 8);
+        assert.equal(result.data[0]?.datetime, "1970-01-01T00:00:00.000Z");
+        assert.equal(result.data.at(-1)?.datetime, "1970-01-01T21:00:00.000Z");
     });
 
     it("groups Forecast5 data into daily points and preserves provider zero precipitation", async () => {
@@ -115,7 +169,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
             },
         );
 
-        assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
+        assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), { data: [{
             datetime: "1970-01-01T12:00:00.000Z",
             weather: expectedWeather("midday rain"),
             description: "midday rain",
@@ -129,7 +183,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
             uvi: null,
             temp: 32,
             pop: null,
-        }]);
+        }], cache: "upstream" });
         assert.equal(requestUrl?.pathname, "/data/2.5/forecast");
         assert.equal(requestUrl?.searchParams.get("units"), "metric");
     });

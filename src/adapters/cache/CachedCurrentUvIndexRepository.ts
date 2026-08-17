@@ -1,4 +1,5 @@
 import { CurrentUvIndex } from "../../domain/entities/CurrentUvIndex.js";
+import { DataFetchResult } from "../../domain/entities/DataFetchResult.js";
 import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
 import CurrentUvIndexRepository from "../../domain/repositories/ICurrentUvIndexRepository.js";
 
@@ -13,17 +14,17 @@ class CachedCurrentUvIndexRepository implements CurrentUvIndexRepository {
         private readonly _now: () => number = Date.now,
     ) {}
 
-    public async getCurrentUvIndex (coordinates: UvIndexCoordinates): Promise<CurrentUvIndex> {
+    public async getCurrentUvIndex (coordinates: UvIndexCoordinates): Promise<DataFetchResult<CurrentUvIndex>> {
         const key = coordinates.lat + ":" + coordinates.lon;
         const cached = this._cache.get(key);
         const now = this._now();
 
         if (cached && cached.expiresAt > now) {
-            return cached.value;
+            return { data: cached.value, cache: "cached" };
         }
 
-        const value = await this._upstream.getCurrentUvIndex(coordinates);
-        this._cache.set(key, { value, expiresAt: now + this._ttlMs });
-        return value;
+        const result = await this._upstream.getCurrentUvIndex(coordinates);
+        this._cache.set(key, { value: result.data, expiresAt: now + this._ttlMs });
+        return { data: result.data, cache: "upstream" };
     }
 }

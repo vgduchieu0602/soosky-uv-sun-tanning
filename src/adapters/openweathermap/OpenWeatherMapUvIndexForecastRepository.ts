@@ -2,6 +2,7 @@ import {
     UvIndexForecastPoint,
     UvIndexForecastWeather,
 } from "../../domain/entities/UvIndexForecastPoint.js";
+import { DataFetchResult } from "../../domain/entities/DataFetchResult.js";
 import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
 import UpstreamUnavailableError from "../../domain/errors/UpstreamUnavailableError.js";
 import UvIndexForecastRepository from "../../domain/repositories/IUvIndexForecastRepository.js";
@@ -12,6 +13,7 @@ const FIVE_DAY_FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"
 const HOUR_IN_SECONDS = 60 * 60;
 const DAY_IN_SECONDS = 24 * HOUR_IN_SECONDS;
 const DAILY_TARGET_SECOND = 12 * HOUR_IN_SECONDS;
+const HOURLY_FORECAST_POINTS_PER_DAY = 8;
 
 interface OpenWeatherMapWeather {
     id?: unknown;
@@ -35,7 +37,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
         private readonly _fetch: typeof fetch = fetch,
     ) {}
 
-    public async getDailyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
+    public async getDailyUvForecast (coordinates: UvIndexCoordinates): Promise<DataFetchResult<UvIndexForecastPoint[]>> {
         const payload = await this._fetchPayload(FIVE_DAY_FORECAST_URL, coordinates);
         if (!isRecord(payload) || !Array.isArray(payload.list)) {
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
@@ -43,16 +45,24 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
 
         const city = isRecord(payload.city) ? payload.city : undefined;
         const timezoneOffset = toFiniteNumber(city?.timezone) ?? 0;
-        return selectDailySteps(payload.list as OpenWeatherMapForecastStep[], timezoneOffset).map(toForecastPoint);
+        return {
+            data: selectDailySteps(payload.list as OpenWeatherMapForecastStep[], timezoneOffset).map(toForecastPoint),
+            cache: "upstream",
+        };
     }
 
-    public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
+    public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<DataFetchResult<UvIndexForecastPoint[]>> {
         const payload = await this._fetchPayload(FIVE_DAY_FORECAST_URL, coordinates);
         if (!isRecord(payload) || !Array.isArray(payload.list)) {
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
         }
 
-        return (payload.list as OpenWeatherMapForecastStep[]).map(toForecastPoint);
+        return {
+            data: (payload.list as OpenWeatherMapForecastStep[])
+                .slice(0, HOURLY_FORECAST_POINTS_PER_DAY)
+                .map(toForecastPoint),
+            cache: "upstream",
+        };
     }
 
     private async _fetchPayload (endpoint: string, coordinates: UvIndexCoordinates): Promise<unknown> {
