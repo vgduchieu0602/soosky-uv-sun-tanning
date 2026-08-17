@@ -1,15 +1,15 @@
 export interface UvIndexForecastWeather {
-    code: string;
-    mainWeather: string;
-    description: string;
-    icon: string;
+    code: string | null;
+    mainWeather: string | null;
+    description: string | null;
+    icon: string | null;
 }
 
 export interface UvIndexForecastPoint {
-    datetime: Date;
+    datetime: Date | null;
     weather: UvIndexForecastWeather[];
-    description: string;
-    uvi: number;
-    temp: number;
-    pop: number;
+    description: string | null;
+    uvi: number | null;
+    temp: number | null;
+    pop: number | null;
 }

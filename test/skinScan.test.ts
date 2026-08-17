@@ -49,7 +49,6 @@ describe("POST /api/v1/skin-scan", () => {
             () => "disconnected",
             {
                 uv: {
-                    getCurrentUvIndex: undefined,
                     getDailyUvForecast: undefined,
                     getHourlyUvForecast: undefined,
                 },

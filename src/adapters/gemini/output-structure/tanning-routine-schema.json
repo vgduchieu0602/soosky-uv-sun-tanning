@@ -37,8 +37,26 @@
           "description": "Total calculated duration in days."
         },
         "targetGoal": {
-          "type": "string",
-          "description": "Routine objective."
+          "type": "object",
+          "description": "Routine objective containing a title and the target text.",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Title of the goal."
+            },
+            "targetText": {
+              "type": "string",
+              "description": "Routine objective. Maximum 65 characters."
+            }
+          },
+          "required": [
+            "title",
+            "targetText"
+          ],
+          "propertyOrdering": [
+            "title",
+            "targetText"
+          ]
         },
         "dailySchedule": {
           "type": "array",
@@ -50,7 +68,7 @@
               },
               "phase": {
                 "type": "string",
-                "description": "Title/Phase for the day. Maximum 7 words"
+                "description": "Title/Phase for the day. Maximum 32 characters."
               },
               "activities": {
                 "type": "array",

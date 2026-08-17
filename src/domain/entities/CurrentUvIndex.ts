@@ -1,5 +1,8 @@
+import { UvIndexForecastWeather } from "./UvIndexForecastPoint.js";
+
 export interface CurrentUvIndex {
-    description: string;
-    uvi: number;
-    temp: number;
+    description: string | null;
+    uvi: null;
+    temp: number | null;
+    weather: UvIndexForecastWeather[];
 }

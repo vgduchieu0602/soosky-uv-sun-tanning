@@ -1,14 +1,15 @@
 import { CurrentUvIndex } from "../../domain/entities/CurrentUvIndex.js";
-import UvIndexRepository, { UvIndexCoordinates } from "../../domain/repositories/IUvIndexRepository.js";
+import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
+import CurrentUvIndexRepository from "../../domain/repositories/ICurrentUvIndexRepository.js";
 
 export { GetCurrentUvIndexQuery };
 export { GetCurrentUvIndexUseCase as default };
 
 class GetCurrentUvIndexUseCase {
-    public constructor (private readonly _uvIndexRepository: UvIndexRepository) {}
+    public constructor (private readonly _currentUvIndexRepository: CurrentUvIndexRepository) {}
 
     public async execute (query: GetCurrentUvIndexQuery): Promise<CurrentUvIndex> {
-        return this._uvIndexRepository.getCurrentUvIndex(query);
+        return this._currentUvIndexRepository.getCurrentUvIndex(query);
     }
 }
 

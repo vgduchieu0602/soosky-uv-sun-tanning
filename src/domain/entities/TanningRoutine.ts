@@ -8,10 +8,15 @@ export interface TanningRoutineDay {
     activities: string[];
 }
 
+export interface TanningRoutineTargetGoal {
+    title: string;
+    targetText: string;
+}
+
 export interface TanningRoutineData {
     routineName: string;
     totalDays: number;
-    targetGoal: string;
+    targetGoal: TanningRoutineTargetGoal;
     dailySchedule: TanningRoutineDay[];
 }
 

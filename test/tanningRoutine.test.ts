@@ -15,7 +15,7 @@ describe("POST /api/v1/tanning-routine", () => {
             skin: {} as never,
             tanning: {
                 createRoutine: {
-                    execute: async () => ({ data: { routineName: "Safe glow", totalDays: 2, targetGoal: "Gradual tan", dailySchedule: [{ day: 1, phase: "Prep", activities: ["Use SPF 50+"] }, { day: 2, phase: "Rest", activities: ["No sun exposure."] }] } }),
+                    execute: async () => ({ data: { routineName: "Safe glow", totalDays: 2, targetGoal: { title: "Safe glow", targetText: "Build a gradual protected tan." }, dailySchedule: [{ day: 1, phase: "Prep", activities: ["Use SPF 50+"] }, { day: 2, phase: "Rest", activities: ["No sun exposure."] }] } }),
                 },
             },
         } as never);
@@ -27,7 +27,7 @@ describe("POST /api/v1/tanning-routine", () => {
     it("returns an exact generated routine", async () => {
         const response = await fetch(baseUrl + "/api/v1/tanning-routine", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ currentSkin, desiredSkin: "Medium Skin" }) });
         assert.equal(response.status, 200);
-        assert.deepEqual(await response.json(), { data: { routineName: "Safe glow", totalDays: 2, targetGoal: "Gradual tan", dailySchedule: [{ day: 1, phase: "Prep", activities: ["Use SPF 50+"] }, { day: 2, phase: "Rest", activities: ["No sun exposure."] }] } });
+        assert.deepEqual(await response.json(), { data: { routineName: "Safe glow", totalDays: 2, targetGoal: { title: "Safe glow", targetText: "Build a gradual protected tan." }, dailySchedule: [{ day: 1, phase: "Prep", activities: ["Use SPF 50+"] }, { day: 2, phase: "Rest", activities: ["No sun exposure."] }] } });
     });
 
     it("passes a scan error through without invoking Gemini", async () => {

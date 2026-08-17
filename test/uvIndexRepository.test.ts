@@ -1,40 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import CachedUvIndexRepository from "../src/adapters/cache/CachedUvIndexRepository.js";
 import CachedUvIndexForecastRepository from "../src/adapters/cache/CachedUvIndexForecastRepository.js";
-import OpenWeatherMapUvIndexRepository from "../src/adapters/openweathermap/OpenWeatherMapUvIndexRepository.js";
 import OpenWeatherMapUvIndexForecastRepository from "../src/adapters/openweathermap/OpenWeatherMapUvIndexForecastRepository.js";
-import { CurrentUvIndex } from "../src/domain/entities/CurrentUvIndex.js";
-import UvIndexRepository from "../src/domain/repositories/IUvIndexRepository.js";
 import UvIndexForecastRepository from "../src/domain/repositories/IUvIndexForecastRepository.js";
 
-describe("CachedUvIndexRepository", () => {
-    it("dung lai gia tri trong 6 gio va tai lai khi het han", async () => {
-        let now = 1_000;
-        let upstreamCalls = 0;
-        const upstream: UvIndexRepository = {
-            getCurrentUvIndex: async (): Promise<CurrentUvIndex> => {
-                upstreamCalls += 1;
-                return { description: "clear sky", uvi: upstreamCalls, temp: 30 };
-            },
-        };
-        const repository = new CachedUvIndexRepository(upstream, 6 * 60 * 60 * 1000, () => now);
-
-        const first = await repository.getCurrentUvIndex({ lat: 10.7, lon: 106.7 });
-        now += 6 * 60 * 60 * 1000 - 1;
-        const cached = await repository.getCurrentUvIndex({ lat: 10.7, lon: 106.7 });
-        now += 1;
-        const refreshed = await repository.getCurrentUvIndex({ lat: 10.7, lon: 106.7 });
-
-        assert.equal(first.uvi, 1);
-        assert.equal(cached.uvi, 1);
-        assert.equal(refreshed.uvi, 2);
-        assert.equal(upstreamCalls, 2);
-    });
-});
-
 describe("CachedUvIndexForecastRepository", () => {
-    it("cache daily 12 gio va hourly 6 gio doc lap", async () => {
+    it("caches daily and hourly forecasts for 12 hours", async () => {
         let now = 1_000;
         let dailyCalls = 0;
         let hourlyCalls = 0;
@@ -65,7 +36,7 @@ describe("CachedUvIndexForecastRepository", () => {
         const repository = new CachedUvIndexForecastRepository(
             upstream,
             12 * 60 * 60 * 1000,
-            6 * 60 * 60 * 1000,
+            12 * 60 * 60 * 1000,
             () => now,
         );
 
@@ -74,140 +45,94 @@ describe("CachedUvIndexForecastRepository", () => {
         now += 6 * 60 * 60 * 1000;
         const daily = await repository.getDailyUvForecast({ lat: 10.7, lon: 106.7 });
         const hourly = await repository.getHourlyUvForecast({ lat: 10.7, lon: 106.7 });
+        now += 6 * 60 * 60 * 1000;
+        const refreshedDaily = await repository.getDailyUvForecast({ lat: 10.7, lon: 106.7 });
+        const refreshedHourly = await repository.getHourlyUvForecast({ lat: 10.7, lon: 106.7 });
 
         assert.equal(daily[0]?.uvi, 1);
-        assert.equal(hourly[0]?.uvi, 2);
-        assert.equal(dailyCalls, 1);
+        assert.equal(hourly[0]?.uvi, 1);
+        assert.equal(refreshedDaily[0]?.uvi, 2);
+        assert.equal(refreshedHourly[0]?.uvi, 2);
+        assert.equal(dailyCalls, 2);
         assert.equal(hourlyCalls, 2);
     });
 });
 
-describe("OpenWeatherMapUvIndexRepository", () => {
-    it("map data dau tien cua One Call 4.0 va yeu cau don vi metric", async () => {
+describe("OpenWeatherMapUvIndexForecastRepository", () => {
+    it("maps Forecast5 three-hour records for the hourly endpoint", async () => {
         let requestUrl: URL | undefined;
-        const repository = new OpenWeatherMapUvIndexRepository(
+        const repository = new OpenWeatherMapUvIndexForecastRepository(
             "test-key",
             async (input): Promise<Response> => {
                 requestUrl = new URL(input.toString());
                 return new Response(JSON.stringify({
-                    data: [{
-                        temp: 31.5,
-                        uvi: 8.1,
-                        weather: [{ description: "clear sky" }],
-                    }],
+                    list: [
+                        { dt: 86_400, main: { temp: 30 }, pop: 0, weather: [providerWeather("first forecast")] },
+                        { dt: 97_200, main: { temp: 31 }, pop: 0.4, weather: [providerWeather("next forecast")] },
+                    ],
                 }), { status: 200 });
             },
-        );
-
-        const result = await repository.getCurrentUvIndex({ lat: 10.7769, lon: 106.7009 });
-
-        assert.deepEqual(result, { description: "clear sky", uvi: 8.1, temp: 31.5 });
-        assert.equal(requestUrl?.pathname, "/data/4.0/onecall/current");
-        assert.equal(requestUrl?.searchParams.get("lat"), "10.7769");
-        assert.equal(requestUrl?.searchParams.get("lon"), "106.7009");
-        assert.equal(requestUrl?.searchParams.get("units"), "metric");
-        assert.equal(requestUrl?.searchParams.get("appid"), "test-key");
-    });
-});
-
-describe("OpenWeatherMapUvIndexForecastRepository", () => {
-    it("returns only local 06:00 through 18:00 three-hour hourly forecast slots", async () => {
-        const repository = new OpenWeatherMapUvIndexForecastRepository(
-            "test-key",
-            async (): Promise<Response> => new Response(JSON.stringify({
-                timezone_offset: 7 * 60 * 60,
-                data: [
-                    hourlyStep(82_800, "06:00", 1),
-                    hourlyStep(86_400, "07:00", 2),
-                    hourlyStep(93_600, "09:00", 3),
-                    hourlyStep(100_800, "11:00", 4),
-                    hourlyStep(104_400, "12:00", 5),
-                    hourlyStep(115_200, "15:00", 6),
-                    hourlyStep(126_000, "18:00", 7),
-                    hourlyStep(129_600, "19:00", 8),
-                ],
-            }), { status: 200 }),
         );
 
         assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), [
-            expectedHourlyPoint(82_800, "06:00", 1),
-            expectedHourlyPoint(93_600, "09:00", 3),
-            expectedHourlyPoint(104_400, "12:00", 5),
-            expectedHourlyPoint(115_200, "15:00", 6),
-            expectedHourlyPoint(126_000, "18:00", 7),
+            {
+                datetime: new Date(86_400_000),
+                weather: expectedWeather("first forecast"),
+                description: "first forecast",
+                uvi: null,
+                temp: 30,
+                pop: 0,
+            },
+            {
+                datetime: new Date(97_200_000),
+                weather: expectedWeather("next forecast"),
+                description: "next forecast",
+                uvi: null,
+                temp: 31,
+                pop: 0.4,
+            },
         ]);
+        assert.equal(requestUrl?.pathname, "/data/2.5/forecast");
+        assert.equal(requestUrl?.searchParams.get("units"), "metric");
     });
 
-    it("treats a missing daily pop as zero precipitation probability", async () => {
-        const repository = new OpenWeatherMapUvIndexForecastRepository(
-            "test-key",
-            async (): Promise<Response> => new Response(JSON.stringify({
-                data: [{
-                    dt: 0,
-                    temp: { day: 32.82 },
-                    uvi: 0,
-                    weather: [providerWeather("broken clouds")],
-                }],
-            }), { status: 200 }),
-        );
-
-        assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
-            datetime: new Date(0),
-            weather: expectedWeather("broken clouds"),
-            description: "broken clouds",
-            uvi: 0,
-            temp: 32.82,
-            pop: 0,
-        }]);
-    });
-
-    it("map daily temp.day va hourly moi 3 gio tu One Call 4.0", async () => {
-        const requestedUrls: URL[] = [];
+    it("groups Forecast5 data into daily points and preserves provider zero precipitation", async () => {
+        let requestUrl: URL | undefined;
         const repository = new OpenWeatherMapUvIndexForecastRepository(
             "test-key",
             async (input): Promise<Response> => {
-                const url = new URL(input.toString());
-                requestedUrls.push(url);
-                const isDaily = url.pathname.endsWith("/1day");
+                requestUrl = new URL(input.toString());
                 return new Response(JSON.stringify({
-                    timezone_offset: 0,
-                    data: isDaily
-                        ? [{ dt: 86_400, temp: { day: 29.5 }, uvi: 6.2, pop: 0.7, weather: [providerWeather("light rain")] }]
-                        : [
-                            { dt: 21_600, temp: 30, uvi: 1, pop: 0, weather: [providerWeather("first")] },
-                            { dt: 25_200, temp: 30, uvi: 2, pop: 0, weather: [providerWeather("skip one")] },
-                            { dt: 32_400, temp: 31, uvi: 4, pop: 0.1, weather: [providerWeather("three hours")] },
-                        ],
+                    city: { timezone: 0 },
+                    list: [
+                        { dt: 32_400, main: { temp: 29 }, pop: 0.7, weather: [providerWeather("morning rain")] },
+                        { dt: 43_200, main: { temp: 30 }, pop: 0, weather: [providerWeather("midday rain")] },
+                        { dt: 118_800, main: { temp: 31 }, pop: 0.2, weather: [providerWeather("next morning")] },
+                        { dt: 129_600, main: { temp: 32 }, weather: [providerWeather("next midday")] },
+                    ],
                 }), { status: 200 });
             },
         );
 
-        const daily = await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 });
-        const hourly = await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 });
-
-        assert.deepEqual(daily, [{
-            datetime: new Date(86_400_000),
-            weather: expectedWeather("light rain"),
-            description: "light rain",
-            uvi: 6.2,
-            temp: 29.5,
-            pop: 0.7,
+        assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
+            datetime: new Date(43_200_000),
+            weather: expectedWeather("midday rain"),
+            description: "midday rain",
+            uvi: null,
+            temp: 30,
+            pop: 0,
+        }, {
+            datetime: new Date(129_600_000),
+            weather: expectedWeather("next midday"),
+            description: "next midday",
+            uvi: null,
+            temp: 32,
+            pop: null,
         }]);
-        assert.deepEqual(hourly, [
-            expectedHourlyPoint(21_600, "first", 1),
-            { ...expectedHourlyPoint(32_400, "three hours", 4), temp: 31, pop: 0.1 },
-        ]);
-        assert.deepEqual(requestedUrls.map((url) => url.pathname), [
-            "/data/4.0/onecall/timeline/1day",
-            "/data/4.0/onecall/timeline/1h",
-        ]);
-        assert.ok(requestedUrls.every((url) => url.searchParams.get("units") === "metric"));
+        assert.equal(requestUrl?.pathname, "/data/2.5/forecast");
+        assert.equal(requestUrl?.searchParams.get("units"), "metric");
     });
 });
-
-function hourlyStep (dt: number, description: string, uvi: number): object {
-    return { dt, temp: 30, uvi, pop: 0, weather: [providerWeather(description)] };
-}
 
 function providerWeather (description: string): object {
     return { id: 500, main: "Rain", description, icon: "10d" };
@@ -215,8 +140,4 @@ function providerWeather (description: string): object {
 
 function expectedWeather (description: string): object[] {
     return [{ code: "500d", mainWeather: "Rain", description, icon: "10d" }];
-}
-
-function expectedHourlyPoint (dt: number, description: string, uvi: number): object {
-    return { datetime: new Date(dt * 1000), weather: expectedWeather(description), description, uvi, temp: 30, pop: 0 };
 }

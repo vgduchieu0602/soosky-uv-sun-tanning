@@ -1,10 +1,10 @@
 import { connectMongoInBackground, getDatabaseStatus } from "./adapters/mongo/connectMongo.js";
-import CachedUvIndexRepository from "./adapters/cache/CachedUvIndexRepository.js";
+import CachedCurrentUvIndexRepository from "./adapters/cache/CachedCurrentUvIndexRepository.js";
 import CachedUvIndexForecastRepository from "./adapters/cache/CachedUvIndexForecastRepository.js";
 import GeminiSkinScanAnalyzer from "./adapters/gemini/GeminiSkinScanAnalyzer.js";
 import GeminiTanningRoutineRepository from "./adapters/gemini/GeminiTanningRoutineRepository.js";
 import SharpImageNormalizer from "./adapters/image/SharpImageNormalizer.js";
-import OpenWeatherMapUvIndexRepository from "./adapters/openweathermap/OpenWeatherMapUvIndexRepository.js";
+import OpenWeatherMapCurrentUvIndexRepository from "./adapters/openweathermap/OpenWeatherMapCurrentUvIndexRepository.js";
 import OpenWeatherMapUvIndexForecastRepository from "./adapters/openweathermap/OpenWeatherMapUvIndexForecastRepository.js";
 import GetCurrentUvIndexUseCase from "./application/use-cases/GetCurrentUvIndexUseCase.js";
 import GetDailyUvForecastUseCase from "./application/use-cases/GetDailyUvForecastUseCase.js";
@@ -21,12 +21,12 @@ const {
     },
 } = config;
 
-const UV_INDEX_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const CURRENT_UV_INDEX_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const DAILY_UV_FORECAST_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
-const HOURLY_UV_FORECAST_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const uvIndexRepository = new CachedUvIndexRepository(
-    new OpenWeatherMapUvIndexRepository(config.openWeatherMap.apiKey),
-    UV_INDEX_CACHE_TTL_MS,
+const HOURLY_UV_FORECAST_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const currentUvIndexRepository = new CachedCurrentUvIndexRepository(
+    new OpenWeatherMapCurrentUvIndexRepository(config.openWeatherMap.apiKey),
+    CURRENT_UV_INDEX_CACHE_TTL_MS,
 );
 const uvIndexForecastRepository = new CachedUvIndexForecastRepository(
     new OpenWeatherMapUvIndexForecastRepository(config.openWeatherMap.apiKey),
@@ -38,7 +38,7 @@ const skinScanAnalyzer = new GeminiSkinScanAnalyzer(config.gemini.apiKey, config
 const tanningRoutineRepository = new GeminiTanningRoutineRepository(config.gemini.apiKey, config.gemini.model);
 const useCases = {
     uv: {
-        getCurrentUvIndex: new GetCurrentUvIndexUseCase(uvIndexRepository),
+        getCurrentUvIndex: new GetCurrentUvIndexUseCase(currentUvIndexRepository),
         getDailyUvForecast: new GetDailyUvForecastUseCase(uvIndexForecastRepository),
         getHourlyUvForecast: new GetHourlyUvForecastUseCase(uvIndexForecastRepository),
     },

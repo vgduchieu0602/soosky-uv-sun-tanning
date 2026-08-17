@@ -1,18 +1,14 @@
 import { CurrentUvIndex } from "../../domain/entities/CurrentUvIndex.js";
-import UvIndexRepository, { UvIndexCoordinates } from "../../domain/repositories/IUvIndexRepository.js";
+import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
+import CurrentUvIndexRepository from "../../domain/repositories/ICurrentUvIndexRepository.js";
 
-export { CachedUvIndexRepository as default };
+export { CachedCurrentUvIndexRepository as default };
 
-interface CacheEntry {
-    value: CurrentUvIndex;
-    expiresAt: number;
-}
-
-class CachedUvIndexRepository implements UvIndexRepository {
-    private readonly _cache = new Map<string, CacheEntry>();
+class CachedCurrentUvIndexRepository implements CurrentUvIndexRepository {
+    private readonly _cache = new Map<string, { value: CurrentUvIndex; expiresAt: number }>();
 
     public constructor (
-        private readonly _upstream: UvIndexRepository,
+        private readonly _upstream: CurrentUvIndexRepository,
         private readonly _ttlMs: number,
         private readonly _now: () => number = Date.now,
     ) {}

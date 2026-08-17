@@ -1,5 +1,5 @@
 import { UvIndexForecastPoint } from "../entities/UvIndexForecastPoint.js";
-import { UvIndexCoordinates } from "./IUvIndexRepository.js";
+import { UvIndexCoordinates } from "../entities/UvIndexCoordinates.js";
 
 export { UvIndexForecastRepository as default };
 

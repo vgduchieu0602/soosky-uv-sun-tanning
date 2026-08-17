@@ -207,7 +207,7 @@ class Server {
         }
 
         const data = await this._useCases.uv.getCurrentUvIndex.execute(this._readCoordinates(request));
-        response.json({ ok: true, data: formatResponseData(data) });
+        response.json({ ok: true, data: formatResponseData(data, null) });
     }
 
     private async _GET_uvIndexDailyForecast (request: Request, response: Response): Promise<void> {
@@ -216,7 +216,7 @@ class Server {
         }
 
         const data = await this._useCases.uv.getDailyUvForecast.execute(this._readCoordinates(request));
-        response.json({ ok: true, data: formatResponseData(data) });
+        response.json({ ok: true, data: formatResponseData(data, null) });
     }
 
     private async _GET_uvIndexHourlyForecast (request: Request, response: Response): Promise<void> {
@@ -225,7 +225,7 @@ class Server {
         }
 
         const data = await this._useCases.uv.getHourlyUvForecast.execute(this._readCoordinates(request));
-        response.json({ ok: true, data: formatResponseData(data) });
+        response.json({ ok: true, data: formatResponseData(data, null) });
     }
 
     private async _POST_skinScan (request: Request, response: Response): Promise<void> {

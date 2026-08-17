@@ -80,7 +80,9 @@ function parseData (value: unknown): TanningRoutineData | undefined {
     if (
         typeof value.routineName !== "string" || value.routineName.trim() === ""
         || typeof totalDays !== "number" || !Number.isSafeInteger(totalDays) || totalDays <= 0
-        || typeof value.targetGoal !== "string" || value.targetGoal.trim() === ""
+        || !isRecord(value.targetGoal) || !hasOnlyKeys(value.targetGoal, ["title", "targetText"])
+        || typeof value.targetGoal.title !== "string" || value.targetGoal.title.trim() === ""
+        || typeof value.targetGoal.targetText !== "string" || value.targetGoal.targetText.trim() === "" || value.targetGoal.targetText.length > 65
         || !Array.isArray(value.dailySchedule) || value.dailySchedule.length !== totalDays
     ) return undefined;
 
@@ -89,7 +91,12 @@ function parseData (value: unknown): TanningRoutineData | undefined {
     const days = dailySchedule as TanningRoutineData["dailySchedule"];
     if (days.some((entry, index) => entry.day !== index + 1)) return undefined;
 
-    return { routineName: value.routineName, totalDays, targetGoal: value.targetGoal, dailySchedule: days };
+    return {
+        routineName: value.routineName,
+        totalDays,
+        targetGoal: { title: value.targetGoal.title, targetText: value.targetGoal.targetText },
+        dailySchedule: days,
+    };
 }
 
 function parseDay (value: unknown): TanningRoutineData["dailySchedule"][number] | undefined {
@@ -97,7 +104,7 @@ function parseDay (value: unknown): TanningRoutineData["dailySchedule"][number] 
     const day = value.day;
     if (
         typeof day !== "number" || !Number.isSafeInteger(day) || day <= 0
-        || typeof value.phase !== "string" || value.phase.trim() === "" || value.phase.trim().split(/\s+/).length > 7
+        || typeof value.phase !== "string" || value.phase.trim() === "" || value.phase.length > 32
         || !Array.isArray(value.activities) || value.activities.length === 0
         || !value.activities.every((activity) => typeof activity === "string" && activity.trim() !== "")
     ) return undefined;

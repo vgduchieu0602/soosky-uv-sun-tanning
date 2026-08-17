@@ -64,22 +64,13 @@ Response `200`:
 }
 ```
 
-## Current UV index
+## UV forecasts
+
+Both forecast endpoints require `lat` (`-90` to `90`) and `lon` (`-180` to `180`) query parameters.
 
 ### `GET /api/v1/uv-index`
 
-Query parameters:
-
-| Name | Type | Required | Range |
-| --- | --- | --- | --- |
-| `lat` | number | Yes | `-90` to `90` |
-| `lon` | number | Yes | `-180` to `180` |
-
-Example:
-
-```text
-GET /api/v1/uv-index?lat=10.7769&lon=106.7009
-```
+Uses OpenWeatherMap [Current Weather](https://openweathermap.org/api/current?collection=current_forecast) and is cached for 6 hours per coordinate pair.
 
 Response `200`:
 
@@ -87,22 +78,26 @@ Response `200`:
 {
   "ok": true,
   "data": {
-    "description": "clear sky",
-    "uvi": "8.1",
-    "temp": "31.5"
+    "description": "overcast clouds",
+    "uvi": null,
+    "temp": "31.8",
+    "weather": [
+      {
+        "code": "804d",
+        "mainWeather": "Clouds",
+        "description": "overcast clouds",
+        "icon": "04d"
+      }
+    ]
   }
 }
 ```
 
-`temp` is Celsius. Values are strings because the shared response formatter normalizes numbers. Results are cached for 6 hours per coordinate pair.
-
-## UV forecasts
-
-Both forecast endpoints accept the same required `lat` and `lon` query parameters as the current UV endpoint.
+`description`, `uvi`, and `temp` preserve the previous response fields. `weather` is added for icon rendering. `uvi` is `null` because Current Weather does not provide UV index.
 
 ### `GET /api/v1/uv-index/daily`
 
-Returns the One Call daily timeline at one-day intervals. Results are cached for 12 hours.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and groups its 3-hour records into one result per local calendar day. The selected record is the forecast closest to 12:00 local time. Results are cached for 12 hours.
 
 Response `200`:
 
@@ -131,7 +126,7 @@ Response `200`:
 
 ### `GET /api/v1/uv-index/hourly`
 
-Returns only the One Call hourly records at 06:00, 09:00, 12:00, 15:00, and 18:00 in the location's local timezone. Results are cached for 6 hours.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns its 3-hour forecast records in provider order. Results are cached for 12 hours.
 
 Response item fields for daily and hourly:
 
@@ -140,11 +135,13 @@ Response item fields for daily and hourly:
 | `datetime` | Forecast instant in ISO 8601 UTC |
 | `weather` | OpenWeatherMap weather conditions; each item has `code`, `mainWeather`, `description`, and `icon` |
 | `description` | Weather description from OpenWeatherMap |
-| `uvi` | UV index |
+| `uvi` | UV index; `null` because Forecast5 does not provide it |
 | `temp` | Temperature in Celsius |
-| `pop` | Probability of precipitation from `0` to `1` |
+| `pop` | Probability of precipitation from `0` to `1`; `null` when the provider does not provide it |
 
 `weather[].code` is a string composed from the provider weather ID and the day/night suffix in `icon`; for example, weather ID `500` with icon `10d` becomes `"500d"`.
+
+For daily and hourly forecasts, any unavailable provider field is returned as JSON `null`; a provider value of `0` remains `"0"` after the API's standard numeric string formatting.
 
 ## Facial skin scan
 
@@ -235,7 +232,10 @@ Successful response `200`:
   "data": {
     "routineName": "Very Fair to Medium Skin Gradual Glow",
     "totalDays": 14,
-    "targetGoal": "Build a gradual, protected medium tone.",
+    "targetGoal": {
+      "title": "Gradual protected glow",
+      "targetText": "Build a gradual, protected medium tone."
+    },
     "dailySchedule": [
       {
         "day": 1,
@@ -255,7 +255,7 @@ Successful response `200`:
 }
 ```
 
-The API validates that `dailySchedule` has one sequential entry for every day from `1` through `totalDays`. `grounding` is optional.
+The API validates that `dailySchedule` has one sequential entry for every day from `1` through `totalDays`; each `phase` is at most 32 characters and `targetGoal.targetText` is at most 65 characters. `grounding` is optional.
 
 If skin scan fails, submit its exact error object instead of a routine request:
 

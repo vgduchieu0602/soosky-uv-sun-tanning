@@ -13,7 +13,14 @@ describe("UV forecast endpoints", () => {
             () => "disconnected",
             {
                 uv: {
-                    getCurrentUvIndex: { execute: async () => ({ description: "clear sky", uvi: 8, temp: 31 }) },
+                    getCurrentUvIndex: {
+                        execute: async () => ({
+                            description: "overcast clouds",
+                            uvi: null,
+                            temp: 31.8,
+                            weather: [{ code: "804d", mainWeather: "Clouds", description: "overcast clouds", icon: "04d" }],
+                        }),
+                    },
                     getDailyUvForecast: {
                         execute: async () => [{
                             datetime: new Date("2026-08-14T00:00:00.000Z"),
@@ -29,9 +36,9 @@ describe("UV forecast endpoints", () => {
                             datetime: new Date("2026-08-14T06:00:00.000Z"),
                             weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
                             description: "few clouds",
-                            uvi: 4.1,
+                            uvi: null,
                             temp: 30,
-                            pop: 0.1,
+                            pop: null,
                         }],
                     },
                 },
@@ -45,6 +52,21 @@ describe("UV forecast endpoints", () => {
 
     after(async () => {
         await server.close();
+    });
+
+    it("returns current weather in the legacy current UV response shape", async () => {
+        const response = await fetch(baseUrl + "/api/v1/uv-index?lat=10.7769&lon=106.7009");
+
+        assert.equal(response.status, 200);
+        assert.deepEqual(await response.json(), {
+            ok: true,
+            data: {
+                description: "overcast clouds",
+                uvi: null,
+                temp: "31.8",
+                weather: [{ code: "804d", mainWeather: "Clouds", description: "overcast clouds", icon: "04d" }],
+            },
+        });
     });
 
     it("GET /api/v1/uv-index/daily tra ve du lieu forecast daily", async () => {
@@ -79,9 +101,9 @@ describe("UV forecast endpoints", () => {
             datetime: "2026-08-14T06:00:00.000Z",
             weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
             description: "few clouds",
-            uvi: "4.1",
+            uvi: null,
             temp: "30",
-            pop: "0.1",
+            pop: null,
         }]);
     });
 });

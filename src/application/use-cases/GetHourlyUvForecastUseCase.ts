@@ -1,6 +1,6 @@
 import { UvIndexForecastPoint } from "../../domain/entities/UvIndexForecastPoint.js";
+import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
 import UvIndexForecastRepository from "../../domain/repositories/IUvIndexForecastRepository.js";
-import { UvIndexCoordinates } from "../../domain/repositories/IUvIndexRepository.js";
 
 export { GetHourlyUvForecastQuery };
 export { GetHourlyUvForecastUseCase as default };

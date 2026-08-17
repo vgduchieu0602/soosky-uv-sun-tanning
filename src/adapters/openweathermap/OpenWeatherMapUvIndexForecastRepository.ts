@@ -2,34 +2,31 @@ import {
     UvIndexForecastPoint,
     UvIndexForecastWeather,
 } from "../../domain/entities/UvIndexForecastPoint.js";
+import { UvIndexCoordinates } from "../../domain/entities/UvIndexCoordinates.js";
 import UpstreamUnavailableError from "../../domain/errors/UpstreamUnavailableError.js";
 import UvIndexForecastRepository from "../../domain/repositories/IUvIndexForecastRepository.js";
-import { UvIndexCoordinates } from "../../domain/repositories/IUvIndexRepository.js";
 
 export { OpenWeatherMapUvIndexForecastRepository as default };
 
-const DAILY_TIMELINE_URL = "https://api.openweathermap.org/data/4.0/onecall/timeline/1day";
-const HOURLY_TIMELINE_URL = "https://api.openweathermap.org/data/4.0/onecall/timeline/1h";
+const FIVE_DAY_FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast";
 const HOUR_IN_SECONDS = 60 * 60;
 const DAY_IN_SECONDS = 24 * HOUR_IN_SECONDS;
-const HOURLY_LOCAL_HOURS = new Set([6, 9, 12, 15, 18]);
+const DAILY_TARGET_SECOND = 12 * HOUR_IN_SECONDS;
 
-interface OpenWeatherMapTimelineResponse {
-    data?: OpenWeatherMapForecastStep[];
-    timezone_offset?: number;
+interface OpenWeatherMapWeather {
+    id?: unknown;
+    main?: unknown;
+    description?: unknown;
+    icon?: unknown;
 }
 
 interface OpenWeatherMapForecastStep {
-    dt?: number;
-    temp?: number | { day?: number };
-    uvi?: number;
-    pop?: number;
-    weather?: Array<{
-        id?: number;
-        main?: string;
-        description?: string;
-        icon?: string;
-    }>;
+    dt?: unknown;
+    main?: {
+        temp?: unknown;
+    };
+    pop?: unknown;
+    weather?: OpenWeatherMapWeather[];
 }
 
 class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastRepository {
@@ -39,26 +36,26 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
     ) {}
 
     public async getDailyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
-        const timeline = await this._fetchTimeline(DAILY_TIMELINE_URL, coordinates);
-        return timeline.data.map((step) => this._toForecastPoint(step, "daily"));
-    }
-
-    public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
-        const timeline = await this._fetchTimeline(HOURLY_TIMELINE_URL, coordinates);
-        const timezoneOffset = timeline.timezone_offset;
-        if (typeof timezoneOffset !== "number" || !Number.isFinite(timezoneOffset)) {
+        const payload = await this._fetchPayload(FIVE_DAY_FORECAST_URL, coordinates);
+        if (!isRecord(payload) || !Array.isArray(payload.list)) {
             throw new UpstreamUnavailableError("Weather provider response is incomplete.");
         }
 
-        return timeline.data
-            .filter((step) => isRequestedHourlySlot(step.dt, timezoneOffset))
-            .map((step) => this._toForecastPoint(step, "hourly"));
+        const city = isRecord(payload.city) ? payload.city : undefined;
+        const timezoneOffset = toFiniteNumber(city?.timezone) ?? 0;
+        return selectDailySteps(payload.list as OpenWeatherMapForecastStep[], timezoneOffset).map(toForecastPoint);
     }
 
-    private async _fetchTimeline (
-        endpoint: string,
-        coordinates: UvIndexCoordinates,
-    ): Promise<OpenWeatherMapTimelineResponse & { data: OpenWeatherMapForecastStep[] }> {
+    public async getHourlyUvForecast (coordinates: UvIndexCoordinates): Promise<UvIndexForecastPoint[]> {
+        const payload = await this._fetchPayload(FIVE_DAY_FORECAST_URL, coordinates);
+        if (!isRecord(payload) || !Array.isArray(payload.list)) {
+            throw new UpstreamUnavailableError("Weather provider response is incomplete.");
+        }
+
+        return (payload.list as OpenWeatherMapForecastStep[]).map(toForecastPoint);
+    }
+
+    private async _fetchPayload (endpoint: string, coordinates: UvIndexCoordinates): Promise<unknown> {
         const url = new URL(endpoint);
         url.searchParams.set("lat", String(coordinates.lat));
         url.searchParams.set("lon", String(coordinates.lon));
@@ -77,98 +74,113 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
             throw new UpstreamUnavailableError("Weather provider returned status " + response.status + ".");
         }
 
-        let payload: OpenWeatherMapTimelineResponse;
-
         try {
-            payload = await response.json() as OpenWeatherMapTimelineResponse;
+            return await response.json() as unknown;
         } catch {
             throw new UpstreamUnavailableError("Weather provider returned invalid JSON.");
         }
-
-        if (!Array.isArray(payload.data)) {
-            throw new UpstreamUnavailableError("Weather provider response is incomplete.");
-        }
-
-        return payload as OpenWeatherMapTimelineResponse & { data: OpenWeatherMapForecastStep[] };
-    }
-
-    private _toForecastPoint (
-        step: OpenWeatherMapForecastStep,
-        timeline: "daily" | "hourly",
-    ): UvIndexForecastPoint {
-        const datetime = getForecastDatetime(step.dt);
-        const weather = mapForecastWeather(step.weather);
-        const description = weather?.[0]?.description;
-        const temp = timeline === "daily"
-            ? getDailyTemperature(step.temp)
-            : step.temp;
-        const pop = step.pop ?? 0;
-
-        if (
-            datetime === undefined
-            || weather === undefined
-            || typeof description !== "string"
-            || typeof temp !== "number"
-            || !Number.isFinite(temp)
-            || typeof step.uvi !== "number"
-            || !Number.isFinite(step.uvi)
-            || typeof pop !== "number"
-            || !Number.isFinite(pop)
-            || pop < 0
-            || pop > 1
-        ) {
-            throw new UpstreamUnavailableError("Weather provider response is incomplete.");
-        }
-
-        return { datetime, weather, description, uvi: step.uvi, temp, pop };
     }
 }
 
-function getDailyTemperature (temperature: OpenWeatherMapForecastStep["temp"]): number | undefined {
-    if (typeof temperature === "object" && temperature !== null) {
-        return temperature.day;
+function selectDailySteps (
+    steps: OpenWeatherMapForecastStep[],
+    timezoneOffset: number,
+): OpenWeatherMapForecastStep[] {
+    const groups = new Map<number, OpenWeatherMapForecastStep[]>();
+
+    for (const step of steps) {
+        const timestamp = toFiniteNumber(step.dt);
+        if (timestamp === null) continue;
+
+        const localDay = Math.floor((timestamp + timezoneOffset) / DAY_IN_SECONDS);
+        const group = groups.get(localDay) ?? [];
+        group.push(step);
+        groups.set(localDay, group);
     }
 
-    return undefined;
+    return [...groups.entries()]
+        .sort(([firstDay], [secondDay]) => firstDay - secondDay)
+        .flatMap(([, group]) => {
+            const step = selectStepClosestToNoon(group, timezoneOffset);
+            return step === undefined ? [] : [step];
+        });
 }
 
-function getForecastDatetime (timestamp: OpenWeatherMapForecastStep["dt"]): Date | undefined {
-    if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) return undefined;
+function selectStepClosestToNoon (
+    steps: OpenWeatherMapForecastStep[],
+    timezoneOffset: number,
+): OpenWeatherMapForecastStep | undefined {
+    return steps.reduce<OpenWeatherMapForecastStep | undefined>((closest, step) => {
+        if (closest === undefined) return step;
 
-    const datetime = new Date(timestamp * 1000);
-    return Number.isNaN(datetime.getTime()) ? undefined : datetime;
+        const stepDistance = distanceFromLocalNoon(step.dt, timezoneOffset);
+        const closestDistance = distanceFromLocalNoon(closest.dt, timezoneOffset);
+        return stepDistance < closestDistance ? step : closest;
+    }, undefined);
 }
 
-function mapForecastWeather (
-    weather: OpenWeatherMapForecastStep["weather"],
-): UvIndexForecastWeather[] | undefined {
-    if (!Array.isArray(weather) || weather.length === 0) return undefined;
+function distanceFromLocalNoon (timestamp: unknown, timezoneOffset: number): number {
+    const value = toFiniteNumber(timestamp);
+    if (value === null) return Number.POSITIVE_INFINITY;
 
-    const mapped = weather.map((item) => {
-        const period = item.icon?.at(-1);
-        if (
-            !Number.isSafeInteger(item.id)
-            || typeof item.main !== "string" || item.main === ""
-            || typeof item.description !== "string" || item.description === ""
-            || typeof item.icon !== "string" || item.icon === ""
-            || (period !== "d" && period !== "n")
-        ) return undefined;
+    const localSecondOfDay = ((value + timezoneOffset) % DAY_IN_SECONDS + DAY_IN_SECONDS) % DAY_IN_SECONDS;
+    return Math.abs(localSecondOfDay - DAILY_TARGET_SECOND);
+}
+
+function toForecastPoint (step: OpenWeatherMapForecastStep): UvIndexForecastPoint {
+    const weather = mapForecastWeather(step.weather);
+
+    return {
+        datetime: getForecastDatetime(step.dt),
+        weather,
+        description: weather[0]?.description ?? null,
+        uvi: null,
+        temp: toFiniteNumber(step.main?.temp),
+        pop: getPrecipitationProbability(step.pop),
+    };
+}
+
+function getForecastDatetime (timestamp: unknown): Date | null {
+    const value = toFiniteNumber(timestamp);
+    if (value === null) return null;
+
+    const datetime = new Date(value * 1000);
+    return Number.isNaN(datetime.getTime()) ? null : datetime;
+}
+
+function getPrecipitationProbability (value: unknown): number | null {
+    const probability = toFiniteNumber(value);
+    return probability === null || probability < 0 || probability > 1 ? null : probability;
+}
+
+function mapForecastWeather (weather: unknown): UvIndexForecastWeather[] {
+    if (!Array.isArray(weather)) return [];
+
+    return weather.map((item) => {
+        const weatherItem = isRecord(item) ? item : {};
+        const icon = toNonEmptyString(weatherItem.icon);
+        const weatherId = toFiniteNumber(weatherItem.id);
+        const period = icon?.at(-1);
 
         return {
-            code: String(item.id) + period,
-            mainWeather: item.main,
-            description: item.description,
-            icon: item.icon,
+            code: weatherId !== null && Number.isSafeInteger(weatherId) && (period === "d" || period === "n")
+                ? String(weatherId) + period
+                : null,
+            mainWeather: toNonEmptyString(weatherItem.main),
+            description: toNonEmptyString(weatherItem.description),
+            icon,
         };
     });
-
-    if (mapped.some((item) => item === undefined)) return undefined;
-    return mapped as UvIndexForecastWeather[];
 }
 
-function isRequestedHourlySlot (timestamp: unknown, timezoneOffset: number): boolean {
-    if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) return false;
+function toFiniteNumber (value: unknown): number | null {
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
 
-    const localSecondOfDay = ((timestamp + timezoneOffset) % DAY_IN_SECONDS + DAY_IN_SECONDS) % DAY_IN_SECONDS;
-    return localSecondOfDay % HOUR_IN_SECONDS === 0 && HOURLY_LOCAL_HOURS.has(localSecondOfDay / HOUR_IN_SECONDS);
+function toNonEmptyString (value: unknown): string | null {
+    return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+function isRecord (value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -15,7 +15,10 @@ const QUERY = {
 const DATA = {
     routineName: "Gradual glow",
     totalDays: 2,
-    targetGoal: "Build color gradually.",
+    targetGoal: {
+        title: "Protected gradual glow",
+        targetText: "Build color gradually with protected exposure.",
+    },
     dailySchedule: [
         { day: 1, phase: "Prep", activities: ["Use SPF 50+"] },
         { day: 2, phase: "Rest", activities: ["No sun exposure."] },
@@ -68,6 +71,42 @@ test("rejects a routine that skips a day", async () => {
     const repository = new GeminiTanningRoutineRepository("key", "model", async () => ({
         text: JSON.stringify({
             data: { ...DATA, dailySchedule: [{ day: 2, phase: "Skipped", activities: ["No sun exposure."] }, { day: 3, phase: "Rest", activities: ["Hydrate."] }] },
+        }),
+    }));
+
+    assert.deepEqual(await repository.createRoutine(QUERY), {
+        errmsg: { errorCode: "ERR-01", suggestion: "Please try again later." },
+    });
+});
+
+test("rejects a routine with an oversized goal text", async () => {
+    const repository = new GeminiTanningRoutineRepository("key", "model", async () => ({
+        text: JSON.stringify({
+            data: {
+                ...DATA,
+                targetGoal: {
+                    ...DATA.targetGoal,
+                    targetText: "A".repeat(66),
+                },
+            },
+        }),
+    }));
+
+    assert.deepEqual(await repository.createRoutine(QUERY), {
+        errmsg: { errorCode: "ERR-01", suggestion: "Please try again later." },
+    });
+});
+
+test("rejects a routine with a phase longer than 32 characters", async () => {
+    const repository = new GeminiTanningRoutineRepository("key", "model", async () => ({
+        text: JSON.stringify({
+            data: {
+                ...DATA,
+                dailySchedule: [
+                    { ...DATA.dailySchedule[0], phase: "A".repeat(33) },
+                    DATA.dailySchedule[1],
+                ],
+            },
         }),
     }));
 

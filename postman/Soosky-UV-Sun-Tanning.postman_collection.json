@@ -31,7 +31,7 @@
       }]
     },
     {
-      "name": "UV",
+      "name": "UV forecast",
       "item": [
         {
           "name": "Current UV index",
@@ -45,10 +45,11 @@
             "script": {
               "type": "text/javascript",
               "exec": [
-                "pm.test('returns current UV values', function () {",
+                "pm.test('returns current weather with icon metadata', function () {",
                 "  pm.response.to.have.status(200);",
                 "  const data = pm.response.json().data;",
-                "  pm.expect(data).to.have.all.keys('description', 'uvi', 'temp');",
+                "  pm.expect(data).to.have.all.keys('description', 'uvi', 'temp', 'weather');",
+                "  pm.expect(data.weather).to.be.an('array');",
                 "});"
               ]
             }
@@ -157,7 +158,10 @@
                 "  const body = pm.response.json();",
                 "  if (body.data) {",
                 "    pm.expect(body.data).to.have.all.keys('routineName', 'totalDays', 'targetGoal', 'dailySchedule');",
+                "    pm.expect(body.data.targetGoal).to.have.all.keys('title', 'targetText');",
+                "    pm.expect(body.data.targetGoal.targetText.length).to.be.at.most(65);",
                 "    pm.expect(body.data.dailySchedule.length).to.eql(body.data.totalDays);",
+                "    body.data.dailySchedule.forEach((entry) => pm.expect(entry.phase.length).to.be.at.most(32));",
                 "  } else { pm.expect(body).to.have.property('errmsg'); }",
                 "});"
               ]
