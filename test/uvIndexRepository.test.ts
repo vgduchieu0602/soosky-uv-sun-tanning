@@ -13,7 +13,7 @@ describe("CachedUvIndexForecastRepository", () => {
             getDailyUvForecast: async () => {
                 dailyCalls += 1;
                 return [{
-                    datetime: new Date(0),
+                    datetime: "1970-01-01T00:00:00+00:00",
                     weather: expectedWeather("clear sky"),
                     description: "clear sky",
                     uvi: dailyCalls,
@@ -24,7 +24,7 @@ describe("CachedUvIndexForecastRepository", () => {
             getHourlyUvForecast: async () => {
                 hourlyCalls += 1;
                 return [{
-                    datetime: new Date(0),
+                    datetime: "1970-01-01T00:00:00+00:00",
                     weather: expectedWeather("clear sky"),
                     description: "clear sky",
                     uvi: hourlyCalls,
@@ -66,6 +66,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
             async (input): Promise<Response> => {
                 requestUrl = new URL(input.toString());
                 return new Response(JSON.stringify({
+                    city: { timezone: 7 * 60 * 60 },
                     list: [
                         { dt: 86_400, main: { temp: 30 }, pop: 0, weather: [providerWeather("first forecast")] },
                         { dt: 97_200, main: { temp: 31 }, pop: 0.4, weather: [providerWeather("next forecast")] },
@@ -76,7 +77,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
 
         assert.deepEqual(await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 }), [
             {
-                datetime: new Date(86_400_000),
+                datetime: "1970-01-02T07:00:00+07:00",
                 weather: expectedWeather("first forecast"),
                 description: "first forecast",
                 uvi: null,
@@ -84,7 +85,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 pop: 0,
             },
             {
-                datetime: new Date(97_200_000),
+                datetime: "1970-01-02T10:00:00+07:00",
                 weather: expectedWeather("next forecast"),
                 description: "next forecast",
                 uvi: null,
@@ -115,14 +116,14 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         );
 
         assert.deepEqual(await repository.getDailyUvForecast({ lat: 10.7769, lon: 106.7009 }), [{
-            datetime: new Date(43_200_000),
+            datetime: "1970-01-01T12:00:00+00:00",
             weather: expectedWeather("midday rain"),
             description: "midday rain",
             uvi: null,
             temp: 30,
             pop: 0,
         }, {
-            datetime: new Date(129_600_000),
+            datetime: "1970-01-02T12:00:00+00:00",
             weather: expectedWeather("next midday"),
             description: "next midday",
             uvi: null,

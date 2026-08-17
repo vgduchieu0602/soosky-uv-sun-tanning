@@ -86,6 +86,8 @@ class Server {
             ["get", "/api/v1/uv-index", this._GET_uvIndex],
             ["get", "/api/v1/uv-index/daily", this._GET_uvIndexDailyForecast],
             ["get", "/api/v1/uv-index/hourly", this._GET_uvIndexHourlyForecast],
+            ["get", "/api/v1/uv-forecast/daily", this._GET_uvIndexDailyForecast],
+            ["get", "/api/v1/uv-forecast/hourly", this._GET_uvIndexHourlyForecast],
             ["post", "/api/v1/skin-scan", this._skinScanUpload.single("image"), this._POST_skinScan],
             ["post", "/api/v1/tanning-routine", this._POST_tanningRoutine],
         ];
@@ -261,15 +263,13 @@ class Server {
             throw new Error("Tanning routine use case is not configured.");
         }
 
-        const query = readTanningRoutineQuery(request.body);
-        if (query === undefined) {
-            response.status(400).json({
-                errmsg: { errorCode: "ERR-99", suggestion: "Provide currentSkin from a successful skin scan and a valid desiredSkin." },
-            });
+        const parsedQuery = readTanningRoutineQuery(request.body);
+        if ("errmsg" in parsedQuery) {
+            response.status(400).json(parsedQuery);
             return;
         }
 
-        const result = await this._useCases.tanning.createRoutine.execute(query);
+        const result = await this._useCases.tanning.createRoutine.execute(parsedQuery);
         response.status(result.errmsg === undefined ? 200 : 502).json(result);
     }
 
@@ -313,6 +313,17 @@ const HYDRATIONS = new Set<SkinScanData["hydration"]>([
 const SKIN_TYPES = new Set<SkinScanData["skinType"]>([
     "Normal Skin", "Dry Skin", "Oily Skin", "Combination Skin", "Sensitive Skin",
 ]);
+const SKIN_TONE_RANK: Record<DesiredSkin, number> = {
+    "Very Fair Skin": 0,
+    "Fair Skin": 1,
+    "Medium Skin": 2,
+    "Olive Skin": 3,
+    "Brown Skin": 4,
+    "Dark Skin": 5,
+};
+const MINIMUM_SKIN_AGE = 1;
+const MAXIMUM_SKIN_AGE = 100;
+const MAXIMUM_SKIN_AGE_RANGE = 20;
 
 function readScanError (body: unknown): SkinScanError | undefined {
     if (!isRecord(body) || !isRecord(body.errmsg)) return undefined;
@@ -330,26 +341,87 @@ function readScanError (body: unknown): SkinScanError | undefined {
     return { errorCode, suggestion };
 }
 
-function readTanningRoutineQuery (body: unknown): TanningRoutineQuery | undefined {
-    if (!isRecord(body) || !isRecord(body.currentSkin) || typeof body.desiredSkin !== "string") return undefined;
+function readTanningRoutineQuery (
+    body: unknown,
+): TanningRoutineQuery | { errmsg: { errorCode: "ERR-99"; suggestion: string } } {
+    if (!isRecord(body) || !isRecord(body.currentSkin)) {
+        return tanningInputError("currentSkin from a successful skin scan is required.");
+    }
     const skin = body.currentSkin;
+    const desiredSkinInput = readDesiredSkin(body);
+    if ("suggestion" in desiredSkinInput) return tanningInputError(desiredSkinInput.suggestion);
+    const desiredSkin = desiredSkinInput.desiredSkin;
+
     if (
         typeof skin.skinTone !== "string" || !SKIN_TONES.has(skin.skinTone as DesiredSkin)
-        || typeof skin.skinAge !== "string" || skin.skinAge.trim() === ""
         || typeof skin.hydration !== "string" || !HYDRATIONS.has(skin.hydration as SkinScanData["hydration"])
         || typeof skin.skinType !== "string" || !SKIN_TYPES.has(skin.skinType as SkinScanData["skinType"])
-        || !SKIN_TONES.has(body.desiredSkin as DesiredSkin)
-    ) return undefined;
+    ) return tanningInputError("currentSkin must contain valid scan-skin values.");
+
+    const skinAge = normalizeSkinAge(skin);
+    if (skinAge === undefined) {
+        return tanningInputError("currentSkin.skinAge must be a valid age range between 1 and 100 years, with a maximum 20-year span.");
+    }
+
+    if (!SKIN_TONES.has(desiredSkin as DesiredSkin)) {
+        return tanningInputError("targetTone must be one of the supported skin tones.");
+    }
+
+    if (SKIN_TONE_RANK[desiredSkin as DesiredSkin] < SKIN_TONE_RANK[skin.skinTone as DesiredSkin]) {
+        return tanningInputError("targetTone must be the same as or darker than current skin tone.");
+    }
 
     return {
         currentSkin: {
             skinTone: skin.skinTone as SkinScanData["skinTone"],
-            skinAge: skin.skinAge,
+            skinAge,
             hydration: skin.hydration as SkinScanData["hydration"],
             skinType: skin.skinType as SkinScanData["skinType"],
         },
-        desiredSkin: body.desiredSkin as DesiredSkin,
+        desiredSkin: desiredSkin as DesiredSkin,
     };
+}
+
+function readDesiredSkin (
+    body: Record<string, unknown>,
+): { desiredSkin: string } | { suggestion: string } {
+    const targetTone = body.targetTone;
+    const desiredSkin = body.desiredSkin;
+    if (targetTone === undefined && desiredSkin === undefined) return { suggestion: "targetTone (or desiredSkin) is required." };
+    if (targetTone !== undefined && typeof targetTone !== "string") return { suggestion: "targetTone must be a string." };
+    if (desiredSkin !== undefined && typeof desiredSkin !== "string") return { suggestion: "desiredSkin must be a string." };
+    if (typeof targetTone === "string" && typeof desiredSkin === "string" && targetTone !== desiredSkin) {
+        return { suggestion: "targetTone and desiredSkin must match when both are provided." };
+    }
+    return { desiredSkin: (targetTone ?? desiredSkin) as string };
+}
+
+function normalizeSkinAge (skin: Record<string, unknown>): string | undefined {
+    if (typeof skin.skinAge === "string") {
+        const match = /^(\d{1,3})\s*-\s*(\d{1,3})$/.exec(skin.skinAge.trim());
+        if (!match) return undefined;
+        const minimum = Number(match[1]);
+        const maximum = Number(match[2]);
+        if (!isValidSkinAgeRange(minimum, maximum)) return undefined;
+        return String(minimum) + "-" + String(maximum);
+    }
+
+    if (typeof skin.age === "number" && Number.isInteger(skin.age) && isValidSkinAgeRange(skin.age, skin.age)) {
+        return String(skin.age) + "-" + String(skin.age);
+    }
+
+    return undefined;
+}
+
+function isValidSkinAgeRange (minimum: number, maximum: number): boolean {
+    return minimum >= MINIMUM_SKIN_AGE
+        && maximum <= MAXIMUM_SKIN_AGE
+        && minimum <= maximum
+        && maximum - minimum <= MAXIMUM_SKIN_AGE_RANGE;
+}
+
+function tanningInputError (suggestion: string): { errmsg: { errorCode: "ERR-99"; suggestion: string } } {
+    return { errmsg: { errorCode: "ERR-99", suggestion } };
 }
 
 function isRecord (value: unknown): value is Record<string, unknown> {

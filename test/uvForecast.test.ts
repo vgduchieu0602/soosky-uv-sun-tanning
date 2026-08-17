@@ -106,4 +106,25 @@ describe("UV forecast endpoints", () => {
             pop: null,
         }]);
     });
+
+    it("supports the legacy uv-forecast paths", async () => {
+        const dailyResponse = await fetch(baseUrl + "/api/v1/uv-forecast/daily?lat=10.7769&lon=106.7009");
+        const hourlyResponse = await fetch(baseUrl + "/api/v1/uv-forecast/hourly?lat=10.7769&lon=106.7009");
+
+        assert.equal(dailyResponse.status, 200);
+        assert.equal(hourlyResponse.status, 200);
+    });
+
+    it("rejects invalid coordinates on current, daily, and hourly forecast paths", async () => {
+        for (const path of ["/api/v1/uv-index", "/api/v1/uv-forecast/daily", "/api/v1/uv-forecast/hourly"]) {
+            const response = await fetch(baseUrl + path + "?lat=abc&lon=xyz");
+
+            assert.equal(response.status, 400, path);
+            assert.deepEqual(await response.json(), {
+                ok: false,
+                code: "BAD_REQUEST",
+                reason: "Query parameter 'lat' must be between -90 and 90.",
+            }, path);
+        }
+    });
 });

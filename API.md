@@ -99,6 +99,8 @@ Response `200`:
 
 Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and groups its 3-hour records into one result per local calendar day. The selected record is the forecast closest to 12:00 local time. Results are cached for 12 hours.
 
+`GET /api/v1/uv-forecast/daily` is kept as a backward-compatible alias.
+
 Response `200`:
 
 ```json
@@ -106,7 +108,7 @@ Response `200`:
   "ok": true,
   "data": [
     {
-      "datetime": "2026-08-14T00:00:00.000Z",
+      "datetime": "2026-08-14T07:00:00+07:00",
       "weather": [
         {
           "code": "500d",
@@ -128,11 +130,13 @@ Response `200`:
 
 Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns its 3-hour forecast records in provider order. Results are cached for 12 hours.
 
+`GET /api/v1/uv-forecast/hourly` is kept as a backward-compatible alias.
+
 Response item fields for daily and hourly:
 
 | Field | Meaning |
 | --- | --- |
-| `datetime` | Forecast instant in ISO 8601 UTC |
+| `datetime` | Local forecast time in ISO 8601, including the OpenWeatherMap offset (for example `+07:00`) |
 | `weather` | OpenWeatherMap weather conditions; each item has `code`, `mainWeather`, `description`, and `icon` |
 | `description` | Weather description from OpenWeatherMap |
 | `uvi` | UV index; `null` because Forecast5 does not provide it |
@@ -223,7 +227,9 @@ Request body:
 }
 ```
 
-`currentSkin` must be the successful `data` value from skin scan. `desiredSkin` must be one of the six `skinTone` values listed above.
+`currentSkin` must be the successful `data` value from skin scan. `skinAge` must be an age range from 1 to 100 years with a maximum 20-year span (for example `25-30`). `desiredSkin` must be one of the six `skinTone` values listed above and cannot be lighter than `currentSkin.skinTone`.
+
+For compatibility, the client may send `targetTone` instead of `desiredSkin`. If both are supplied, their values must match.
 
 Successful response `200`:
 
