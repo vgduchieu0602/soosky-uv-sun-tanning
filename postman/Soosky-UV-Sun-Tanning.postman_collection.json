@@ -99,7 +99,7 @@
                 "  const body = pm.response.json();",
                 "  const data = body.data;",
                 "  pm.expect(data).to.be.an('array');",
-                "  pm.expect(data.length).to.be.at.most(8);",
+                "  pm.expect(data.length).to.be.at.most(9);",
                 "  pm.expect(data[0]).to.have.all.keys('datetime', 'weather', 'description', 'uvi', 'temp', 'pop');",
                 "  pm.expect(data[0].weather[0]).to.have.all.keys('code', 'mainWeather', 'description', 'icon');",
                 "  pm.expect(body.meta.cache).to.be.oneOf(['upstream', 'cached']);",

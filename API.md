@@ -132,7 +132,7 @@ Response `200`:
 
 ### `GET /api/v1/uv-index/hourly`
 
-Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns only the next 24 hours: at most 8 records in provider order, at 3-hour intervals. Results are cached for 15 minutes in this test build.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns a 24-hour inclusive range: at most 9 records in provider order, at 3-hour intervals. For example, a range starting at 09:00 ends at 09:00 the following day. Results are cached for 15 minutes in this test build.
 
 `GET /api/v1/uv-forecast/hourly` is kept as a backward-compatible alias.
 

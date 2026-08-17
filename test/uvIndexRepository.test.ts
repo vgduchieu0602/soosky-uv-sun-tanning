@@ -131,7 +131,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
         assert.equal(requestUrl?.searchParams.get("units"), "metric");
     });
 
-    it("limits the hourly endpoint to the next 24 hours", async () => {
+    it("includes both endpoints of the next 24-hour hourly range", async () => {
         const repository = new OpenWeatherMapUvIndexForecastRepository(
             "test-key",
             async (): Promise<Response> => new Response(JSON.stringify({
@@ -146,9 +146,9 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
 
         const result = await repository.getHourlyUvForecast({ lat: 10.7769, lon: 106.7009 });
 
-        assert.equal(result.data.length, 8);
+        assert.equal(result.data.length, 9);
         assert.equal(result.data[0]?.datetime, "1970-01-01T00:00:00.000Z");
-        assert.equal(result.data.at(-1)?.datetime, "1970-01-01T21:00:00.000Z");
+        assert.equal(result.data.at(-1)?.datetime, "1970-01-02T00:00:00.000Z");
     });
 
     it("groups Forecast5 data into daily points and preserves provider zero precipitation", async () => {

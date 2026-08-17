@@ -13,7 +13,7 @@ const FIVE_DAY_FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"
 const HOUR_IN_SECONDS = 60 * 60;
 const DAY_IN_SECONDS = 24 * HOUR_IN_SECONDS;
 const DAILY_TARGET_SECOND = 12 * HOUR_IN_SECONDS;
-const HOURLY_FORECAST_POINTS_PER_DAY = 8;
+const HOURLY_FORECAST_POINTS_PER_INCLUSIVE_DAY = 9;
 
 interface OpenWeatherMapWeather {
     id?: unknown;
@@ -59,7 +59,7 @@ class OpenWeatherMapUvIndexForecastRepository implements UvIndexForecastReposito
 
         return {
             data: (payload.list as OpenWeatherMapForecastStep[])
-                .slice(0, HOURLY_FORECAST_POINTS_PER_DAY)
+                .slice(0, HOURLY_FORECAST_POINTS_PER_INCLUSIVE_DAY)
                 .map(toForecastPoint),
             cache: "upstream",
         };
