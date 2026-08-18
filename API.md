@@ -231,7 +231,7 @@ Request body:
 }
 ```
 
-`currentSkin` must be the successful `data` value from skin scan. Each age must be at least `1`; there is no maximum age. `skinAge` must be a valid range with a maximum 20-year span (for example `25-30`). `desiredSkin` must be one of the six `skinTone` values listed above and cannot be lighter than `currentSkin.skinTone`.
+`currentSkin` must be the successful `data` value from skin scan. Each age must be at least `1`; there is no maximum age. `skinAge` must be a valid range with a maximum 20-year span (for example `25-30`). `desiredSkin` must be one of the six `skinTone` values listed above.
 
 For compatibility, the client may send `targetTone` instead of `desiredSkin`. If both are supplied, their values must match.
 

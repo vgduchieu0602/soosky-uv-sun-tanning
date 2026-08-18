@@ -372,9 +372,7 @@ function readTanningRoutineQuery (
         return tanningInputError(INVALID_TARGET_TONE_SUGGESTION);
     }
 
-    if (SKIN_TONE_RANK[desiredSkin as DesiredSkin] < SKIN_TONE_RANK[skin.skinTone as DesiredSkin]) {
-        return tanningInputError(INVALID_TARGET_TONE_SUGGESTION);
-    }
+    // Bỏ ràng buộc "không được sáng hơn" — cho phép desiredSkin sáng hơn currentSkin
 
     return {
         currentSkin: {
