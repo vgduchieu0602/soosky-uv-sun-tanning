@@ -327,9 +327,9 @@ const SKIN_TONE_RANK: Record<DesiredSkin, number> = {
 };
 const MINIMUM_SKIN_AGE = 1;
 const MAXIMUM_SKIN_AGE_RANGE = 20;
-const INVALID_TARGET_TONE_SUGGESTION = "Giá trị targetTone không hợp lệ.";
-const INVALID_SKIN_AGE_SUGGESTION = "Độ tuổi phải lớn hơn 0.";
-const INVALID_SKIN_AGE_RANGE_SUGGESTION = "Khoảng tuổi dự đoán không hợp lệ.";
+const INVALID_TARGET_TONE_SUGGESTION = "Invalid targetTone value."
+const INVALID_SKIN_AGE_SUGGESTION = "Age must be greater than 0.";
+const INVALID_SKIN_AGE_RANGE_SUGGESTION = "Invalid predicted age range.";
 
 function readScanError (body: unknown): SkinScanError | undefined {
     if (!isRecord(body) || !isRecord(body.errmsg)) return undefined;
