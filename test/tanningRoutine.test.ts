@@ -69,7 +69,7 @@ describe("POST /api/v1/tanning-routine", () => {
 
         assert.equal(response.status, 400);
         assert.deepEqual(await response.json(), {
-            errmsg: { errorCode: "ERR-99", suggestion: "Độ tuổi phải lớn hơn 0." },
+            errmsg: { errorCode: "ERR-99", suggestion: "Age must be greater than 0." },
         });
     });
 
@@ -93,7 +93,7 @@ describe("POST /api/v1/tanning-routine", () => {
 
             assert.equal(response.status, 400, skinAge);
             assert.deepEqual(await response.json(), {
-                errmsg: { errorCode: "ERR-99", suggestion: "Khoảng tuổi dự đoán không hợp lệ." },
+                errmsg: { errorCode: "ERR-99", suggestion: "Invalid predicted age range." },
             }, skinAge);
         }
     });
@@ -112,7 +112,7 @@ describe("POST /api/v1/tanning-routine", () => {
         assert.deepEqual(await response.json(), {
             errmsg: {
                 errorCode: "ERR-99",
-                suggestion: "Giá trị targetTone không hợp lệ.",
+                suggestion: "Invalid targetTone value.",
             },
         });
     });
