@@ -145,7 +145,6 @@ function toForecastPoint (step: OpenWeatherMapForecastStep): UvIndexForecastPoin
         weather,
         description: weather[0]?.description ?? null,
         uvi: null,
-        maxUvi: null,
         temp: toFiniteNumber(step.main?.temp),
         pop: getPrecipitationProbability(step.pop),
     };

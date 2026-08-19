@@ -18,7 +18,6 @@ describe("UV forecast endpoints", () => {
                             data: {
                                 description: "overcast clouds",
                                 uvi: null,
-                                maxUvi: null,
                                 temp: 31.8,
                                 weather: [{ code: "804d", mainWeather: "Clouds", description: "overcast clouds", icon: "04d" }],
                             },
@@ -32,7 +31,6 @@ describe("UV forecast endpoints", () => {
                                 weather: [{ code: "500d", mainWeather: "Rain", description: "light rain", icon: "10d" }],
                                 description: "light rain",
                                 uvi: 6.2,
-                                maxUvi: null,
                                 temp: 29.5,
                                 pop: 0.7,
                             }],
@@ -46,7 +44,6 @@ describe("UV forecast endpoints", () => {
                                 weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
                                 description: "few clouds",
                                 uvi: null,
-                                maxUvi: null,
                                 temp: 30,
                                 pop: null,
                             }],
@@ -75,7 +72,6 @@ describe("UV forecast endpoints", () => {
             data: {
                 description: "overcast clouds",
                 uvi: null,
-                maxUvi: null,
                 temp: "31.8",
                 weather: [{ code: "804d", mainWeather: "Clouds", description: "overcast clouds", icon: "04d" }],
             },
@@ -98,7 +94,6 @@ describe("UV forecast endpoints", () => {
             weather: [{ code: "500d", mainWeather: "Rain", description: "light rain", icon: "10d" }],
             description: "light rain",
             uvi: "6.2",
-            maxUvi: null,
             temp: "29.5",
             pop: "0.7",
         }]);
@@ -119,7 +114,6 @@ describe("UV forecast endpoints", () => {
             weather: [{ code: "500d", mainWeather: "Rain", description: "few clouds", icon: "10d" }],
             description: "few clouds",
             uvi: null,
-            maxUvi: null,
             temp: "30",
             pop: null,
         }]);
