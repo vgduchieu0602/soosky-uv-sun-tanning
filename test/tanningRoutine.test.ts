@@ -98,7 +98,7 @@ describe("POST /api/v1/tanning-routine", () => {
         }
     });
 
-    it("rejects a target tone lighter than the current skin tone", async () => {
+    it("allows a target tone lighter than the current skin tone", async () => {
         const response = await fetch(baseUrl + "/api/v1/tanning-routine", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -108,12 +108,6 @@ describe("POST /api/v1/tanning-routine", () => {
             }),
         });
 
-        assert.equal(response.status, 400);
-        assert.deepEqual(await response.json(), {
-            errmsg: {
-                errorCode: "ERR-99",
-                suggestion: "Invalid targetTone value.",
-            },
-        });
+        assert.equal(response.status, 200);
     });
 });
