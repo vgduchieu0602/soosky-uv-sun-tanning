@@ -3,7 +3,9 @@ import CachedCurrentUvIndexRepository from "./adapters/cache/CachedCurrentUvInde
 import CachedUvIndexForecastRepository from "./adapters/cache/CachedUvIndexForecastRepository.js";
 import GeminiSkinScanAnalyzer from "./adapters/gemini/GeminiSkinScanAnalyzer.js";
 import GeminiTanningRoutineRepository from "./adapters/gemini/GeminiTanningRoutineRepository.js";
+import MaxUviForecastRepository from "./adapters/forecast/MaxUviForecastRepository.js";
 import SharpImageNormalizer from "./adapters/image/SharpImageNormalizer.js";
+import OpenMeteoUvIndexSeriesRepository from "./adapters/openmeteo/OpenMeteoUvIndexSeriesRepository.js";
 import OpenWeatherMapCurrentUvIndexRepository from "./adapters/openweathermap/OpenWeatherMapCurrentUvIndexRepository.js";
 import OpenWeatherMapUvIndexForecastRepository from "./adapters/openweathermap/OpenWeatherMapUvIndexForecastRepository.js";
 import GetCurrentUvIndexUseCase from "./application/use-cases/GetCurrentUvIndexUseCase.js";
@@ -35,7 +37,10 @@ const currentUvIndexRepository = new CachedCurrentUvIndexRepository(
     CURRENT_UV_INDEX_CACHE_TTL_MS,
 );
 const uvIndexForecastRepository = new CachedUvIndexForecastRepository(
-    new OpenWeatherMapUvIndexForecastRepository(config.openWeatherMap.apiKey),
+    new MaxUviForecastRepository(
+        new OpenWeatherMapUvIndexForecastRepository(config.openWeatherMap.apiKey),
+        new OpenMeteoUvIndexSeriesRepository(),
+    ),
     DAILY_UV_FORECAST_CACHE_TTL_MS,
     HOURLY_UV_FORECAST_CACHE_TTL_MS,
 );

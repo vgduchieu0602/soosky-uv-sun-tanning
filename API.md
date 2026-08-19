@@ -100,7 +100,7 @@ Response `200`:
 
 ### `GET /api/v1/uv-index/daily`
 
-Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and groups its 3-hour records into one result per local calendar day. The selected record is the forecast closest to 12:00 local time. Results are cached for 15 minutes in this test build.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and groups its 3-hour records into one result per local calendar day. The selected record is the forecast closest to 12:00 local time. `maxUvi` comes from [Open-Meteo](https://open-meteo.com/en/docs) `uv_index_max` and is the highest UV index of that whole local day. Results are cached for 15 minutes in this test build.
 
 `GET /api/v1/uv-forecast/daily` is kept as a backward-compatible alias.
 
@@ -122,6 +122,7 @@ Response `200`:
       ],
       "description": "light rain",
       "uvi": "6.2",
+      "maxUvi": "8.5",
       "temp": "29.5",
       "pop": "0.7"
     }
@@ -132,7 +133,7 @@ Response `200`:
 
 ### `GET /api/v1/uv-index/hourly`
 
-Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns a 24-hour inclusive range: at most 9 records in provider order, at 3-hour intervals. For example, a range starting at 09:00 ends at 09:00 the following day. Results are cached for 15 minutes in this test build.
+Uses OpenWeatherMap [Forecast5](https://openweathermap.org/api/forecast5?collection=current_forecast) and returns a 24-hour inclusive range: at most 9 records in provider order, at 3-hour intervals. For example, a range starting at 09:00 ends at 09:00 the following day. `maxUvi` comes from [Open-Meteo](https://open-meteo.com/en/docs) `uv_index` and is the highest of the three hours the record covers, from `datetime` up to but excluding `datetime` plus 3 hours. Results are cached for 15 minutes in this test build.
 
 `GET /api/v1/uv-forecast/hourly` is kept as a backward-compatible alias.
 
@@ -144,6 +145,7 @@ Response item fields for daily and hourly:
 | `weather` | OpenWeatherMap weather conditions; each item has `code`, `mainWeather`, `description`, and `icon` |
 | `description` | Weather description from OpenWeatherMap |
 | `uvi` | UV index; `null` because Forecast5 does not provide it |
+| `maxUvi` | Highest UV index of the period the record covers, from [Open-Meteo](https://open-meteo.com/en/docs); `null` when the UV provider is unavailable |
 | `temp` | Temperature in Celsius |
 | `pop` | Probability of precipitation from `0` to `1`; `null` when the provider does not provide it |
 

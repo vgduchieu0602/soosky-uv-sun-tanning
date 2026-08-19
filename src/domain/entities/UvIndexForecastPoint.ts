@@ -11,6 +11,8 @@ export interface UvIndexForecastPoint {
     weather: UvIndexForecastWeather[];
     description: string | null;
     uvi: number | null;
+    /** UV cao nhat cua khoang thoi gian ma diem du bao dai dien. */
+    maxUvi: number | null;
     temp: number | null;
     pop: number | null;
 }

@@ -47,6 +47,7 @@ describe("CachedUvIndexForecastRepository", () => {
                     weather: expectedWeather("clear sky"),
                     description: "clear sky",
                     uvi: dailyCalls,
+                    maxUvi: null,
                     temp: 30,
                     pop: 0,
                 }], cache: "upstream" };
@@ -58,6 +59,7 @@ describe("CachedUvIndexForecastRepository", () => {
                     weather: expectedWeather("clear sky"),
                     description: "clear sky",
                     uvi: hourlyCalls,
+                    maxUvi: null,
                     temp: 30,
                     pop: 0,
                 }], cache: "upstream" };
@@ -115,6 +117,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 weather: expectedWeather("first forecast"),
                 description: "first forecast",
                 uvi: null,
+                maxUvi: null,
                 temp: 30,
                 pop: 0,
             },
@@ -123,6 +126,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
                 weather: expectedWeather("next forecast"),
                 description: "next forecast",
                 uvi: null,
+                maxUvi: null,
                 temp: 31,
                 pop: 0.4,
             },
@@ -174,6 +178,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
             weather: expectedWeather("midday rain"),
             description: "midday rain",
             uvi: null,
+            maxUvi: null,
             temp: 30,
             pop: 0,
         }, {
@@ -181,6 +186,7 @@ describe("OpenWeatherMapUvIndexForecastRepository", () => {
             weather: expectedWeather("next midday"),
             description: "next midday",
             uvi: null,
+            maxUvi: null,
             temp: 32,
             pop: null,
         }], cache: "upstream" });
