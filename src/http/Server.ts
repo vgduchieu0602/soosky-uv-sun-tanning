@@ -70,7 +70,6 @@ class Server {
 
     public constructor (
         private readonly _config: ServerConfig,
-        private readonly _getDatabaseStatus: () => string = () => "unknown",
         private readonly _useCases?: ServerUseCases,
         private readonly _imageNormalizer?: ImageNormalizer,
     ) {
@@ -83,6 +82,7 @@ class Server {
         });
         this._routes = [
             ["get", "/health", this._GET_health],
+            ["get", "/", this._GET_index],
             ["get", "/api/v1/uv-index", this._GET_uvIndex],
             ["get", "/api/v1/uv-index/daily", this._GET_uvIndexDailyForecast],
             ["get", "/api/v1/uv-index/hourly", this._GET_uvIndexHourlyForecast],
@@ -198,9 +198,14 @@ class Server {
             data: formatResponseData({
                 status: "ok",
                 uptimeSeconds: Math.round(process.uptime()),
-                database: this._getDatabaseStatus(),
             }),
         });
+    }
+
+    private _GET_index (_request: Request, response: Response): any {
+        return response.json({
+            message: "Hello world! This is UV Sun Tanning API"
+        })
     }
 
     private async _GET_uvIndex (request: Request, response: Response): Promise<void> {
