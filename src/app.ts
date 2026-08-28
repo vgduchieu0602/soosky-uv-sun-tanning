@@ -3,7 +3,6 @@ import CachedUvIndexForecastRepository from "./adapters/cache/CachedUvIndexForec
 import GeminiSkinScanAnalyzer from "./adapters/gemini/GeminiSkinScanAnalyzer.js";
 import GeminiTanningRoutineRepository from "./adapters/gemini/GeminiTanningRoutineRepository.js";
 import SharpImageNormalizer from "./adapters/image/SharpImageNormalizer.js";
-import { connectMongoInBackground, getDatabaseStatus } from "./adapters/mongo/connectMongo.js";
 import OpenWeatherMapCurrentUvIndexRepository from "./adapters/openweathermap/OpenWeatherMapCurrentUvIndexRepository.js";
 import OpenWeatherMapUvIndexForecastRepository from "./adapters/openweathermap/OpenWeatherMapUvIndexForecastRepository.js";
 import CreateTanningRoutineUseCase from "./application/use-cases/CreateTanningRoutineUseCase.js";
@@ -74,7 +73,6 @@ const useCases = {
 (async () => {
     try {
         await startServer();
-        connectMongoDB();
     } catch (error) {
         console.error(error);
         process.exitCode = 1;
@@ -84,12 +82,8 @@ const useCases = {
 /* -------------------------------------------------------------------------- */
 
 async function startServer() {
-    const server = new Server(config, getDatabaseStatus, useCases, imageNormalizer);
+    const server = new Server(config, useCases, imageNormalizer);
 
     await server.listen();
     console.log(`Soosky UV Sun Tanning API running on http://${HTTP_HOST}:${HTTP_PORT}`);
-}
-
-function connectMongoDB() {
-    void connectMongoInBackground();
 }

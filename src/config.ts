@@ -70,9 +70,6 @@ const config = {
         host:       process.env.HTTP_HOST || "0.0.0.0",
         trustProxy: readTrustProxy(),
     },
-    mongo: {
-        uri: process.env.MONGO_URI,
-    },
     openWeatherMap: {
         apiKey: readRequiredString("OPENWEATHERMAP_API_KEY"),
     },
